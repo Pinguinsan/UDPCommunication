@@ -77,6 +77,7 @@ static const int LOOP_RESULT_WHITESPACE{4};
 
 void sendUDPString(const std::string &str);
 std::string doUDPReadString();
+UDPObjectType udpObjectType{UDPObjectType::UDP_DUPLEX};
 
 void printRxResult(const std::string &str);
 void printTxResult(const std::string &str);
@@ -113,7 +114,9 @@ static std::function<void(const std::string&)> packagedTxResultTask{printTxResul
 static std::function<void(DelayType, int)> packagedDelayResultTask{printDelayResult};
 static std::function<void(FlushType)> packagedFlushResultTask{printFlushResult};
 static std::function<void(LoopType, int, int)> packagedLoopResultTask{printLoopResult};
-static std::shared_ptr<UDPDuplex> udpDuplex;
+static std::shared_ptr<UDPDuplex> udpDuplex{nullptr};
+static std::shared_ptr<UDPClient> udpClient{nullptr};
+static std::shared_ptr<UDPServer> udpServer{nullptr};
 
 static std::string clientHostName{UDPDuplex::s_DEFAULT_CLIENT_HOST_NAME};
 static std::string clientPortNumber{std::to_string(UDPDuplex::s_DEFAULT_CLIENT_PORT_NUMBER)};
@@ -130,6 +133,13 @@ LineEnding lineEndings;
 
 const uint16_t MAXIMUM_PORT_NUMBER{std::numeric_limits<uint16_t>::max()};
 
+/*
+template <typename ReturnValue, typename UDPType, typename Function, typename FunctionArgs...>
+ReturnValue doUdpThing(UDPType udpType, const Function &function, FunctionArgs...args)
+{
+    function(std::forward(udpType.get()), std::forward(args...));
+}
+*/
 
 int main(int argc, char *argv[])
 {
@@ -393,6 +403,14 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (receiveOnly) {
+        
+    } else if (sendOnly) {
+        
+    } else {
+
+    }
+
     prettyPrinter->setForegroundColor(LIST_COLOR);
     prettyPrinter->setFontAttributes(COMMON_FONT_ATTRIBUTE);
     std::cout << "Using ClientHostName=";
@@ -421,13 +439,20 @@ int main(int argc, char *argv[])
     for (auto &it : scriptFiles) {
         std::cout << "Using ScriptFile=" << it << " (" << i++ << "/" << scriptFiles.size() << ")" << std::endl;
     }
+    if (receiveOnly) {
+        udpObjectType = UDPObjectType::UDP_SERVER;
+    } else if (sendOnly) {
+        udpObjectType = UDPObjectType::UDP_CLIENT;
+    } else {
+        udpObjectType = UDPObjectType::UDP_DUPLEX;
+    }
     std::cout << std::endl;
     try {
-        udpDuplex = std::make_shared<UDPDuplex>(clientHostName,
-                                                std::stoi(clientPortNumber), 
-                                                std::stoi(clientPortNumber));
+            udpDuplex = std::make_shared<UDPDuplex>(clientHostName,
+                                                    std::stoi(clientPortNumber), 
+                                                    std::stoi(clientPortNumber),
+                                                    udpObjectType);
         try {
-            udpDuplex->setLineEnding(lineEndings);
             if (maximumReadSize > 0) {
                 //udpDuplex->setMaximumReadSize(maximumReadSize);
             }
@@ -653,7 +678,6 @@ std::string doUDPReadString()
 void sendUDPString(const std::string &str)
 {
     udpDuplex->writeString(str);
-    udpDuplex->flush();
     if ((str != "") && (!isWhitespace(str))) {
         previousStringSent = str;
     }
