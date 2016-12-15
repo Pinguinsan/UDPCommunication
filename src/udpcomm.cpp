@@ -44,10 +44,10 @@ static const int SOFTWARE_PATCH_VERSION{0};
 #endif
 
 static std::list<const char *> CLIENT_PORT_NUMBER_SWITCHES{"-p", "--p", "-client-port-number", "--client-port-number"};
-static std::list<const char *> CLIENT_HOST_NAME_SWITCHES{"-n", "--n", "-host", "--host", "-client-host-name", "--client-host-name"};
-static std::list<const char *> SERVER_PORT_NUMBER_SWITCHES{"-d", "--d", "-host-port-number", "--host-port-number"};
+static std::list<const char *> CLIENT_HOST_NAME_SWITCHES{"-n", "--n", "-host", "--host", "-host-name", "--host-name", "-client-host-name", "--client-host-name"};
+static std::list<const char *> SERVER_PORT_NUMBER_SWITCHES{"-d", "--d", "-server-port-number", "--server-port-number"};
 
-static std::list<const char *> SEND_ONLY_SWITCHES{"-send", "--send", "-send-only", "--send-only"};
+static std::list<const char *> SEND_ONLY_SWITCHES{"-s", "--s", "-send", "--send", "-send-only", "--send-only"};
 static std::list<const char *> MAXIMUM_READ_SIZE_SWITCHES{"-m", "--m", "-max", "--max", "-max-read", "--max-read", "-max-size", "--max-size", "-max-read-size", "--max-read-size"};
 static std::list<const char *> LINE_ENDING_SWITCHES{"-e", "--e", "-line-ending", "--line-ending", "-line-endings", "--line-endings"};
 static std::list<const char *> READ_UNTIL_SWITCHES{"-r", "--r", "-read-until", "--read-until"};
@@ -151,7 +151,6 @@ int main(int argc, char *argv[])
         }
     }
     displayVersion();
-    std::string clientHostName{""};
 
     for (int i = 1; i < argc; i++) {
         if (isSwitch(argv[i], CLIENT_HOST_NAME_SWITCHES)) {
@@ -206,7 +205,7 @@ int main(int argc, char *argv[])
                     } else if (maybePort > MAXIMUM_PORT_NUMBER) {
                         std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not greater than maximum port number (" << maybePort << " > " << MAXIMUM_PORT_NUMBER << "), skipping option" << std::endl;
                     } else {
-                        clientPortNumber = static_cast<std::string>(argv[i]);
+                        clientPortNumber = static_cast<std::string>(maybePortString);
                     }
                 } catch (std::exception &e) {
                     std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
@@ -223,7 +222,7 @@ int main(int argc, char *argv[])
                     } else if (maybePort > MAXIMUM_PORT_NUMBER) {
                         std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified server port number " << tQuoted(maybePortString) << " is not greater than maximum port number (" << maybePort << " > " << MAXIMUM_PORT_NUMBER << "), skipping option" << std::endl;
                     } else {
-                        serverPortNumber = static_cast<std::string>(argv[i]);
+                        serverPortNumber = static_cast<std::string>(maybePortString);
                     }
                 } catch (std::exception &e) {
                     std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified server port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
@@ -248,7 +247,7 @@ int main(int argc, char *argv[])
                     } else if (maybePort > MAXIMUM_PORT_NUMBER) {
                         std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not greater than maximum port number (" << maybePort << " > " << MAXIMUM_PORT_NUMBER << "), skipping option" << std::endl;
                     } else {
-                        serverPortNumber = static_cast<std::string>(argv[i]);
+                        serverPortNumber = maybePortString;
                     }
                 } catch (std::exception &e) {
                     std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
@@ -440,7 +439,7 @@ int main(int argc, char *argv[])
         delayMilliseconds(500);
         udpDuplex->setTimeout(25);        
         long long int TIMEOUT_TIME{400};
-        std::cout << "Successfully opened serial port ";
+        std::cout << "Successfully opened UDP port ";
         prettyPrinter->println(udpDuplex->portName() + "\n");
         for (auto &it : scriptFiles) {
             scriptFileMap.emplace(it, std::make_unique<ScriptExecutor>(it));
@@ -485,7 +484,7 @@ int main(int argc, char *argv[])
         } else if (receiveOnly) {
             std::cout << "Beginning ";
             prettyPrinter->print("receive-only");
-            std::cout << " communication loop, enter desired string and press enter to send strings, or press CTRL+C to quit" << std::endl << std::endl;
+            std::cout << " communication loop, messages received will be displayed, or press CTRL+C to quit" << std::endl << std::endl;
             while (true) {
                 returnString = doUDPReadString();
                 if (returnString != "") {
@@ -554,25 +553,21 @@ void displayHelp()
 {
     std::cout << "Usage: " << PROGRAM_NAME << " [options][=][argument]" << std::endl << std::endl;
     std::cout << "Options: " << std::endl;
-    std::cout << "    -n, --name, -port-name, --port-name: Specify serial port name" << std::endl;
-    std::cout << "    -b, --b, -baud-rate, --baud-rate: Specify baud rate" << std::endl;
-    std::cout << "    -p, --p, -parity, --parity: Specify parity" << std::endl;
-    std::cout << "    -d, --d, -data-bits, --data-bits: Specify data bits" << std::endl;
-    std::cout << "    -s, --s, -stop-bits, --stop-bits: Specify stop bits" << std::endl;
+    std::cout << "    -n, --name, -client-host-name, --client-host-name: Specify where to send datagrams (host name)" << std::endl;
+    std::cout << "    -p, --p, -client-port-number, --client-port-number: Specify which port to send datagrams to" << std::endl;
+    std::cout << "    -d, --d, -server-port-number, --server-port-number: Specify which port to receive datagrams from" << std::endl;
     std::cout << "    -c, --c, -script-file, --script-file: Specify script file to be run after serial port is opened" << std::endl;
     std::cout << "    -e, --e, -line-ending, --line-ending: Specify what type of line ending should be used" << std::endl;
     std::cout << "    -h, --h, -help, --help: Show this help text" << std::endl;
     std::cout << "    -v, --v, -version, --version: Display version" << std::endl;
     std::cout << "Example: " << std::endl;
-    std::cout << "    Command line input: scomm --baud-rate=9600 --port-name=/dev/ttyUSB0 --line-ending=r" << std::endl;
+    std::cout << "    Command line input: udpcomm --line-ending=cr --client-host-name=www.google.com --client-port-number=8887 --server-port-number=8888" << std::endl;
     std::cout << "    Output:" << std::endl;
-    std::cout << "        Using /dev/ttyUSB0 for serial port" << std::endl;
-    std::cout << "        Using BaudRate=9600" << std::endl;
-    std::cout << "        Using Parity=None" << std::endl;
-    std::cout << "        Using StopBits=1" << std::endl;
-    std::cout << "        Using DataBits=8" << std::endl;
+    std::cout << "        Using ClientHostName=www.google.com" << std::endl;
+    std::cout << "        Using ClientPortNumber=8887" << std::endl;
+    std::cout << "        Using ServerPortNumber=8888" << std::endl;
     std::cout << "        Using LineEnding=\\r (Carriage Return)" << std::endl;
-    std::cout << "        Successfully opened serial port /dev/ttyUSB0" << std::endl;
+    std::cout << "        Successfully opened udp port www.google.com" << std::endl;
     std::cout << "        Received 10 bytes: 0123456789" << std::endl;
 }
 
