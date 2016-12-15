@@ -449,8 +449,8 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
     try {
             udpDuplex = std::make_shared<UDPDuplex>(clientHostName,
-                                                    std::stoi(clientPortNumber)+4, 
-                                                    std::stoi(clientPortNumber)+4,
+                                                    std::stoi(clientPortNumber), 
+                                                    std::stoi(serverPortNumber),
                                                     udpObjectType);
         try {
             if (maximumReadSize > 0) {
