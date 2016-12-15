@@ -449,8 +449,8 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
     try {
             udpDuplex = std::make_shared<UDPDuplex>(clientHostName,
-                                                    std::stoi(clientPortNumber), 
-                                                    std::stoi(clientPortNumber),
+                                                    std::stoi(clientPortNumber)+4, 
+                                                    std::stoi(clientPortNumber)+4,
                                                     udpObjectType);
         try {
             if (maximumReadSize > 0) {
@@ -510,11 +510,12 @@ int main(int argc, char *argv[])
             std::cout << "Beginning ";
             prettyPrinter->print("receive-only");
             std::cout << " communication loop, messages received will be displayed, or press CTRL+C to quit" << std::endl << std::endl;
+            startAsyncStdoutTask(packagedAsyncStdoutTask);
             while (true) {
-                returnString = doUDPReadString();
-                if (returnString != "") {
-                    printRxResult(returnString);
-                }
+                if (asyncStdoutTaskFuture->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+                    printRxResult(asyncStdoutTaskFuture->get());
+                    startAsyncStdoutTask(packagedAsyncStdoutTask);
+                }  
             }   
         } else if (synchronousCommunication) {
             std::cout << "Beginning ";
@@ -640,14 +641,18 @@ std::string asyncStdoutTask()
     if (readUntil == "") {
         std::string returnString{""};
         do {
-            returnString += udpDuplex->readString();
+            if (udpDuplex->available()) {
+                returnString += udpDuplex->readString();
+            }
         } while ((returnString.length() == 0) || (isWhitespace(returnString)));
         return returnString;
     } else {
         std::string returnString{""};
         do {
-            returnString += udpDuplex->readString();
-        } while ((returnString.length() == 0) || (isWhitespace(returnString)) && !GeneralUtilities::endsWith(returnString, readUntil));
+            if (udpDuplex->available()) {
+                returnString += udpDuplex->readStringUntil(readUntil);
+            }
+        } while ((returnString.length() == 0) || (isWhitespace(returnString)));
         return returnString;
     }
 }
@@ -669,9 +674,17 @@ void backspaceTerminal(unsigned int howFar)
 std::string doUDPReadString()
 {
     if (readUntil == "") {
-        return udpDuplex->readString();
+        if (udpDuplex->available()) {
+            return udpDuplex->readString();
+        } else {
+            return "";
+        }
     } else {
-        return udpDuplex->readStringUntil(readUntil);
+        if (udpDuplex->available()) {
+            return udpDuplex->readStringUntil(readUntil);
+        } else {
+            return "";
+        }
     }
 }
 
