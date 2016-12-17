@@ -58,13 +58,13 @@ void ScriptExecutor::execute(std::shared_ptr<UDPDuplex> udpDuplex,
                 delayMilliseconds(std::stoi(it.commandArgument()));
             } else if (it.commandType() == UDPCommandType::FLUSH_RX) {
                 printFlushResult(FlushType::RX);
-                udpDuplex->flush();
+                udpDuplex->flushRX();
             } else if (it.commandType() == UDPCommandType::FLUSH_TX) {
                 printFlushResult(FlushType::TX);
-                udpDuplex->flush();
+                udpDuplex->flushTX();
             } else if (it.commandType() == UDPCommandType::FLUSH_RX_TX) {
                 printFlushResult(FlushType::RX_TX);
-                udpDuplex->flush();
+                udpDuplex->flushRXTX();
             } else {
                 throw std::runtime_error(UDP_COMMAND_TYPE_NOT_IMPLEMENTED_STRING + it.commandArgument());
             }

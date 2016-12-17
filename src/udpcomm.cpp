@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
                                packagedLoopResultTask);
         }
         delayMilliseconds(250);
-        udpDuplex->flush();
+        udpDuplex->flushRXTX();
         prettyPrinter->setBackgroundColor(COMMON_BACKGROUND_COLOR);
         prettyPrinter->setFontAttributes(COMMON_FONT_ATTRIBUTE);
         std::string returnString{""};
