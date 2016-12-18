@@ -1,1 +1,0 @@
-/usr/bin/c++    -fsanitize=undefined -frecord-gcc-switches -O3 -DNDEBUG   CMakeFiles/udpcomm.dir/src/udpcomm.cpp.o CMakeFiles/udpcomm.dir/src/udpcommunicationstrings.cpp.o  -o udpcomm -rdynamic -ltjlutils -lpthread 

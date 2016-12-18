@@ -1,3 +1,0 @@
-/opt/GitHub/UDPCommunication/build/CMakeFiles/edit_cache.dir
-/opt/GitHub/UDPCommunication/build/CMakeFiles/rebuild_cache.dir
-/opt/GitHub/UDPCommunication/build/CMakeFiles/udpcomm.dir
