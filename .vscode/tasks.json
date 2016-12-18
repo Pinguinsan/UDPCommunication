@@ -1,0 +1,7 @@
+{
+    "version": "0.1.0",
+    "command": "/opt/GitHub/UDPCommunication/install-udpcomm.sh",
+    "isShellCommand": true,
+    "showOutput": "always",
+    "args": ["/opt/BinaryBuilds/UDPCommunication"]
+}

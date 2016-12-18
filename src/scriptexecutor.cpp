@@ -77,58 +77,57 @@ void ScriptExecutor::execute(std::shared_ptr<UDPDuplex> udpDuplex,
 std::vector<UDPCommand> ScriptExecutor::doUnrollLoopCommands(const std::vector<UDPCommand> &udpCommands)
 {
     using namespace UDPCommunicationStrings;
-    std::vector<UDPCommand> returnCommands;
-    for (auto iter = udpCommands.begin(); iter != udpCommands.end(); iter++) {
-        try {
-            std::cout << "iter = " << iter->commandArgument() << std::endl;
-            if (iter->commandType() == UDPCommandType::WRITE) {
-                returnCommands.push_back(*iter);
-            } else if (iter->commandType() == UDPCommandType::READ) {
-                returnCommands.push_back(*iter);
-            } else if (iter->commandType() == UDPCommandType::DELAY_SECONDS) {
-                returnCommands.push_back(*iter);
-            } else if (iter->commandType() == UDPCommandType::DELAY_MILLISECONDS) {
-                returnCommands.push_back(*iter);
-            } else if (iter->commandType() == UDPCommandType::DELAY_MICROSECONDS) {
-                returnCommands.push_back(*iter);
-            } else if (iter->commandType() == UDPCommandType::FLUSH_RX) {
-                returnCommands.push_back(*iter);
-            } else if (iter->commandType() == UDPCommandType::FLUSH_TX) {
-                returnCommands.push_back(*iter);
-            } else if (iter->commandType() == UDPCommandType::FLUSH_RX_TX) {
-                returnCommands.push_back(*iter);
-            } else if (iter->commandType() == UDPCommandType::LOOP_START) {
-                /*Move past loop_start*/
-                iter++;
-                int loopCount{std::stoi(iter->commandArgument())};
-                std::vector<UDPCommand> loopCommands;
-                int otherLoopStartCount{0};
-                while ((iter->commandType() != UDPCommandType::LOOP_END) && (otherLoopStartCount == 0)) {
-                    if (iter->commandType() == UDPCommandType::LOOP_START) {
-                        otherLoopStartCount++;
-                    }
-                    loopCommands.push_back(*iter);
-                    iter++;
-                }
-                /*move past loop_end*/
-                iter++;
-                /*Put the commands inside the loop into the return commands x number of times, where x is the loop count*/
-                for (int i = 0; i < loopCount; i++) {
-                    for (auto &innerIt : loopCommands) {
-                        returnCommands.push_back(innerIt);
-                    }
-                }
-            } else {
-                throw std::runtime_error(UDP_COMMAND_TYPE_NOT_IMPLEMENTED_STRING + iter->commandArgument());
+    std::vector<UDPCommand> copyCommands{udpCommands};
+    if (!ScriptExecutor::containsLoopStart(copyCommands)) {
+        return copyCommands;
+    }
+    while (ScriptExecutor::containsLoopStart(copyCommands)) {
+        std::pair<int, int> innerLoopPositions = findInnerLoopIndexes(copyCommands);
+        std::vector<UDPCommand> toUnroll{};
+        std::vector<UDPCommand> temp{};
+        int numberOfLoops{std::stoi(copyCommands.at(innerLoopPositions.first).commandArgument())};
+        for (int loops = 0; loops < numberOfLoops; loops++) {
+            for (int i = innerLoopPositions.first+1; i < innerLoopPositions.second; i++) {
+                toUnroll.emplace_back(copyCommands.at(i));
             }
-        } catch (std::exception &e) {
-            throw std::runtime_error(e.what());
+        }
+        for (int i = 0; i < innerLoopPositions.first; i++) {
+            temp.emplace_back(copyCommands.at(i));
+        }
+        for (auto &it : toUnroll) {
+            temp.emplace_back(it);
+        }
+        for (int i = innerLoopPositions.second+1; i < copyCommands.size(); i++) {
+            temp.emplace_back(copyCommands.at(i));
+        }
+        copyCommands = temp; 
+    }
+    return copyCommands;
+}
+std::pair<int, int> ScriptExecutor::findInnerLoopIndexes(const std::vector<UDPCommand> udpCommands)
+{
+    int lastLoopStartPosition{0};
+    int lastLoopEndPosition{0};
+    for (int i = 0; i < udpCommands.size(); i++) {
+        if (udpCommands.at(i).commandType() == UDPCommandType::LOOP_START) {
+            lastLoopStartPosition = i;
         }
     }
-    return returnCommands;
+
+    for (int i = lastLoopStartPosition; i < udpCommands.size(); i++) {
+        if (udpCommands.at(i).commandType() == UDPCommandType::LOOP_END) {
+            if (lastLoopStartPosition == 0) {
+                lastLoopEndPosition = lastLoopStartPosition + i;
+            } else {
+                lastLoopEndPosition = lastLoopStartPosition + i - 1;
+            }
+            break;
+        }
+    }
+    return std::make_pair(lastLoopStartPosition, lastLoopEndPosition);
 }
 
-bool containsLoopStart(const std::vector<UDPCommand> &commands) 
+bool ScriptExecutor::containsLoopStart(const std::vector<UDPCommand> &commands) 
 {
     for (auto &it : commands) {
         if (it.commandType() == UDPCommandType::LOOP_START) {

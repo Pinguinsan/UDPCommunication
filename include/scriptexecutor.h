@@ -8,6 +8,7 @@
 #include <tuple>
 #include <functional>
 #include <cstdlib>
+#include <utility>
 #include <udpduplex.h>
 #include <generalutilities.h>
 
@@ -31,6 +32,9 @@ private:
     std::vector<UDPCommand> m_scriptCommands;
 
     std::vector<UDPCommand> doUnrollLoopCommands(const std::vector<UDPCommand> &UDPCommands);
+    bool containsLoopStart(const std::vector<UDPCommand> &commands);
+    std::pair<int, int> findInnerLoopIndexes(const std::vector<UDPCommand> udpCommands);
+
 
 };
 
