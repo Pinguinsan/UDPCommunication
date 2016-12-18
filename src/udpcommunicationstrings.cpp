@@ -24,8 +24,6 @@ namespace UDPCommunicationStrings
     const char *GENERIC_CONFIG_WARNING_TAIL_STRING{" of configuration file:"};
     const char *CONFIG_EXPRESSION_MALFORMED_STRING{"    expression is malformed/has invalid syntax, ignoring option"};
     const char *EXCEPTION_IN_CONSTRUCTOR_STRING{"WARNING: Standard exception caught in ScriptFileReader constructor: "};
-    const char *UDP_COMMAND_TYPE_NOT_IMPLEMENTED_STRING{"WARNING: UDPCommandType not implemented, skipping command: "};
-    const char *NULL_UDP_DUPLEX_PASSED_TO_EXECUTE_STRING{"WARNING: Null UDPDuplex passed to ScriptExecutor::execute(std::shared_ptr<UDPDuplex>), skipping script execution"};
     const char *SCRIPT_FILE_DOES_NOT_EXISTS_STRING{"WARNING: Script file does not exist, skipping script: "};
     const char *UNABLE_TO_OPEN_SCRIPT_FILE_STRING{"WARNING: Unable to open script file, skipping script: "};
     const char *LOOP_COUNT_PARAMETER_NOT_AN_INTEGER_STRING{"LoopCount() parameter is not an integer, ignoring option"};

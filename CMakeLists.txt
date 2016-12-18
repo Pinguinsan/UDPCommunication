@@ -19,9 +19,6 @@ ENDIF()
 include_directories("${SOURCE_BASE}/include")
 
 set (UDPCOMM_SOURCES "${SOURCE_BASE}/src/udpcomm.cpp"
-                     "${SOURCE_BASE}/src/scriptreader.cpp"
-                     "${SOURCE_BASE}/src/scriptexecutor.cpp"
-                     "${SOURCE_BASE}/src/udpcommand.cpp"
                      "${SOURCE_BASE}/src/udpcommunicationstrings.cpp")
  
 add_executable(udpcomm ${UDPCOMM_SOURCES})

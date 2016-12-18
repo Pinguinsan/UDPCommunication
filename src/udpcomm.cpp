@@ -20,8 +20,8 @@
 #include <datetime.h>
 #include <prettyprinter.h>
 
-#include "scriptreader.h"
-#include "scriptexecutor.h"
+#include <tscriptexecutor.h>
+
 #include "udpcommunicationstrings.h"
 
 using namespace DateTime;
@@ -89,7 +89,7 @@ static unsigned int currentCommandHistoryIndex{0};
 static std::list<std::string> commandHistory;
 
 static std::set<std::string> scriptFiles;
-static std::map<std::string, std::unique_ptr<ScriptExecutor>> scriptFileMap;
+static std::map<std::string, std::unique_ptr<TScriptExecutor>> scriptFileMap;
 
 void backspaceTerminal(unsigned int howFar);
 void displayHelp();
@@ -467,11 +467,11 @@ int main(int argc, char *argv[])
         std::cout << "Successfully opened UDP port ";
         prettyPrinter->println(udpDuplex->portName() + "\n");
         for (auto &it : scriptFiles) {
-            scriptFileMap.emplace(it, std::make_unique<ScriptExecutor>(it));
+            scriptFileMap.emplace(it, std::make_unique<TScriptExecutor>(it));
         }
         i = 1;
         for (auto &it : scriptFileMap) {
-            if (it.second->scriptReader()->commands()->empty()) {
+            if (!it.second->hasCommands()) {
                 std::cout << "ScriptFile " << it.first << " (" << i++ << "/" << scriptFiles.size() << ") has no commands, skipping script" << std::endl;
                 continue;
             }

@@ -26,8 +26,6 @@ namespace UDPCommunicationStrings
     extern const char *GENERIC_CONFIG_WARNING_TAIL_STRING;
     extern const char *CONFIG_EXPRESSION_MALFORMED_STRING;
     extern const char *EXCEPTION_IN_CONSTRUCTOR_STRING;
-    extern const char *UDP_COMMAND_TYPE_NOT_IMPLEMENTED_STRING;
-    extern const char *NULL_UDP_DUPLEX_PASSED_TO_EXECUTE_STRING;
     extern const char *SCRIPT_FILE_DOES_NOT_EXISTS_STRING;
     extern const char *UNABLE_TO_OPEN_SCRIPT_FILE_STRING;
     extern const char *LOOP_COUNT_PARAMETER_NOT_AN_INTEGER_STRING;
