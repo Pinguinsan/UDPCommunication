@@ -241,9 +241,19 @@ runMake || { echo "make failed, bailing out"; exit 1; }
 
 sudo ln -s -f "$buildDir/$programName" "$globalBinDir"  || { echo "Could not link file, bailing out"; exit 1; }
 
+
+installMessage="$programLongName Installed Successfully!"
+totalLength=${#installMessage} 
+
 echo
-echo "*********************************************"
-echo "**$programLongName Installed Successfully!**"
-echo "*********************************************"
-echo 
+for (( i=0; i<totalLength+4; i++ )); do  
+   echo -n "*"
+done
+echo
+echo "**$installMessage**"
+for (( i=0; i<totalLength+4; i++ )); do  
+   echo -n "*"
+done
+echo
+echo
 exit 0
