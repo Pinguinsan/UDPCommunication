@@ -16,7 +16,7 @@ endif()
 if ((CYGWIN OR WIN32) OR (NOT X86))
     set(GCC_ADDITIONAL_COMPILE_FLAGS "")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_ADDITIONAL_COMPILE_FLAGS}")
-
+else()
     set(GCC_ADDITIONAL_COMPILE_FLAGS "-fsanitize=undefined -frecord-gcc-switches")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_ADDITIONAL_COMPILE_FLAGS}")
 endif()
