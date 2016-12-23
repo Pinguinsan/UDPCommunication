@@ -21,12 +21,10 @@
 #include <prettyprinter.h>
 
 #include <tscriptexecutor.h>
-
-#include "udpcommunicationstrings.h"
+#include <tscriptreader.h>
 
 using namespace DateTime;
 using namespace GeneralUtilities;
-using namespace UDPCommunicationStrings;
 
 static const char *PROGRAM_NAME{"udpcomm"};
 static const char *LONG_PROGRAM_NAME{"UDP Communication"};
@@ -132,14 +130,6 @@ std::string getPrettyLineEndings(const std::string &lineEnding);
 LineEnding lineEndings;
 
 const uint16_t MAXIMUM_PORT_NUMBER{std::numeric_limits<uint16_t>::max()};
-
-/*
-template <typename ReturnValue, typename UDPType, typename Function, typename FunctionArgs...>
-ReturnValue doUdpThing(UDPType udpType, const Function &function, FunctionArgs...args)
-{
-    function(std::forward(udpType.get()), std::forward(args...));
-}
-*/
 
 int main(int argc, char *argv[])
 {

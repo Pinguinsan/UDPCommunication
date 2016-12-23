@@ -39,8 +39,19 @@ else
 fi
 
 function doInternetCheck() {
+
+    echo -n "Checking for Cygwin..."
+    cygwinCheck=$(uname -a | grep -i 'cygwin')
+    showSuccess
+
     echo -n "Checking for internet connection...."
-    internetCheck=$(ping 8.8.8.8 -c1 -W1 | grep '1 received')
+    if [[ -z "$cygwinCheck" ]]; then
+        internetCheck=$(ping 8.8.8.8 -n1 | grep -i 'received = 1')
+    else
+        internetCheck=$(ping 8.8.8.8 -c1 -W1 | grep -i '1 received')
+    
+    fi
+
     if [[ -z "$internetCheck" ]]; then
         showFailure
         return 1
