@@ -136,7 +136,7 @@ function changeDirectory() {
 
 function createDirectory() {
     echo -n "Creating directory \"$1\"..."
-    mkdir "$1"
+    mkdir -p "$1"
     if [[ "$?" -ne "0" ]]; then
         showFailure
         return 1
