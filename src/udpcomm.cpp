@@ -44,6 +44,8 @@ static const int SOFTWARE_PATCH_VERSION{0};
 static std::list<const char *> CLIENT_PORT_NUMBER_SWITCHES{"-p", "--p", "-client-port-number", "--client-port-number"};
 static std::list<const char *> CLIENT_HOST_NAME_SWITCHES{"-n", "--n", "-host", "--host", "-host-name", "--host-name", "-client-host-name", "--client-host-name"};
 static std::list<const char *> SERVER_PORT_NUMBER_SWITCHES{"-d", "--d", "-server-port-number", "--server-port-number"};
+static std::list<const char *> CLIENT_RETURN_ADDRESS_PORT_NUMBER_SWITCHES{"-g", "--g", "-client-return-address-port-number", "--client-return-address-port-number"};
+static std::list<const char *> CLIENT_RETURN_ADDRESS_HOST_NAME_SWITCHES{"-a", "--a", "-client-return-address-host-name", "--client-return-address-host-name"};
 
 static std::list<const char *> SEND_ONLY_SWITCHES{"-s", "--s", "-send", "--send", "-send-only", "--send-only"};
 static std::list<const char *> MAXIMUM_READ_SIZE_SWITCHES{"-m", "--m", "-max", "--max", "-max-read", "--max-read", "-max-size", "--max-size", "-max-read-size", "--max-read-size"};
@@ -119,6 +121,8 @@ static std::shared_ptr<UDPServer> udpServer{nullptr};
 static std::string clientHostName{UDPDuplex::s_DEFAULT_CLIENT_HOST_NAME};
 static std::string clientPortNumber{std::to_string(UDPDuplex::s_DEFAULT_CLIENT_PORT_NUMBER)};
 static std::string serverPortNumber{std::to_string(UDPDuplex::s_DEFAULT_SERVER_PORT_NUMBER)};
+static std::string clientReturnAddressHostName{UDPDuplex::s_DEFAULT_CLIENT_RETURN_ADDRESS_HOST_NAME};
+static std::string clientReturnAddressPortNumber{std::to_string(UDPDuplex::s_DEFAULT_CLIENT_RETURN_ADDRESS_PORT_NUMBER)};
 
 bool sendOnly{false};
 bool receiveOnly{false};
@@ -168,6 +172,22 @@ int main(int argc, char *argv[])
                 std::cout << "WARNING: Switch " << argv[i] << " accepted, but no client host name was specified after, skipping option" << std::endl;
             } else {
                 clientHostName = stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"");
+            }
+        } else if (isSwitch(argv[i], CLIENT_RETURN_ADDRESS_HOST_NAME_SWITCHES)) {
+            if (argv[i+1]) {
+                clientReturnAddressHostName = argv[i+1];
+            } else {
+                std::cout << "WARNING: Switch " << argv[i] << " accepted, but no client host name was specified after, skipping option" << std::endl;
+            }
+            i++;
+        } else if (isEqualsSwitch(argv[i], CLIENT_RETURN_ADDRESS_HOST_NAME_SWITCHES)) {
+            std::string copyString{static_cast<std::string>(argv[i])};
+            size_t foundPosition{copyString.find("=")};
+            size_t foundEnd{copyString.substr(foundPosition).find(" ")};
+            if (copyString.substr(foundPosition+1, (foundEnd - foundPosition)) == "") {
+                std::cout << "WARNING: Switch " << argv[i] << " accepted, but no client host name was specified after, skipping option" << std::endl;
+            } else {
+                clientReturnAddressHostName = stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"");
             }
         } else if (isSwitch(argv[i], CLIENT_PORT_NUMBER_SWITCHES)) {
             if (argv[i+1]) {
@@ -248,6 +268,48 @@ int main(int argc, char *argv[])
                         std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not greater than maximum port number (" << maybePort << " > " << MAXIMUM_PORT_NUMBER << "), skipping option" << std::endl;
                     } else {
                         serverPortNumber = maybePortString;
+                    }
+                } catch (std::exception &e) {
+                    std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
+                }
+            }
+        } else if (isSwitch(argv[i], CLIENT_RETURN_ADDRESS_PORT_NUMBER_SWITCHES)) {
+            if (argv[i+1]) {
+                std::string maybePortString{static_cast<std::string>(argv[i+1])};
+                int maybePort{0};
+                try {
+                    maybePort = std::stoi(maybePortString);
+                    if (maybePort < 0) {
+                        std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified server port number " << tQuoted(maybePortString) << " is not a positive number (" << maybePort << " < 0), skipping option" << std::endl;
+                    } else if (maybePort > MAXIMUM_PORT_NUMBER) {
+                        std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified server port number " << tQuoted(maybePortString) << " is not greater than maximum port number (" << maybePort << " > " << MAXIMUM_PORT_NUMBER << "), skipping option" << std::endl;
+                    } else {
+                        clientReturnAddressPortNumber = static_cast<std::string>(maybePortString);
+                    }
+                } catch (std::exception &e) {
+                    std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified server port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
+                }
+            } else {
+                std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but no server host name name was specified after, skipping option" << std::endl;
+            }
+            i++;
+        } else if (isEqualsSwitch(argv[i], CLIENT_RETURN_ADDRESS_PORT_NUMBER_SWITCHES)) {
+            std::string copyString{static_cast<std::string>(argv[i])};
+            size_t foundPosition{copyString.find("=")};
+            size_t foundEnd{copyString.substr(foundPosition).find(" ")};
+            if (copyString.substr(foundPosition+1, (foundEnd - foundPosition)) == "") {
+                std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but no client port number was specified after, skipping option" << std::endl;
+            } else {
+                std::string maybePortString{stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"")};
+                int maybePort{0};
+                try {
+                    maybePort = std::stoi(maybePortString);
+                    if (maybePort < 0) {
+                        std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a positive number (" << maybePort << " < 0), skipping option" << std::endl;
+                    } else if (maybePort > MAXIMUM_PORT_NUMBER) {
+                        std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not greater than maximum port number (" << maybePort << " > " << MAXIMUM_PORT_NUMBER << "), skipping option" << std::endl;
+                    } else {
+                        clientReturnAddressPortNumber = maybePortString;
                     }
                 } catch (std::exception &e) {
                     std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
@@ -411,6 +473,12 @@ int main(int argc, char *argv[])
     
     std::cout << "Using ServerPortNumber=";
     prettyPrinter->println(serverPortNumber);
+
+    std::cout << "Using ClientReturnAddressHostName=";
+    prettyPrinter->println(clientReturnAddressHostName);
+
+    std::cout << "Using ClientReturnAddressPortNumber=";
+    prettyPrinter->println(clientReturnAddressPortNumber);
     
     std::cout << "Using LineEndings=";
     prettyPrinter->println(getPrettyLineEndings(UDPDuplex::lineEndingToString(lineEndings)));
@@ -441,6 +509,8 @@ int main(int argc, char *argv[])
             udpDuplex = std::make_shared<UDPDuplex>(clientHostName,
                                                     std::stoi(clientPortNumber), 
                                                     std::stoi(serverPortNumber),
+                                                    clientReturnAddressHostName,
+                                                    std::stoi(clientReturnAddressPortNumber),
                                                     udpObjectType);
         try {
             if (maximumReadSize > 0) {
@@ -574,6 +644,8 @@ void displayHelp()
     std::cout << "    -d, --d, -server-port-number, --server-port-number: Specify which port to receive datagrams from" << std::endl;
     std::cout << "    -c, --c, -script-file, --script-file: Specify script file to be run after serial port is opened" << std::endl;
     std::cout << "    -e, --e, -line-ending, --line-ending: Specify what type of line ending should be used" << std::endl;
+    std::cout << "    -a, --a, -client-return-address-host-name: Specify the return address host name for the UDP client" << std::endl;
+    std::cout << "    -g, --g, -client-return-address-port-number: Specify the return address port number for the UDP client" << std::endl; 
     std::cout << "    -h, --h, -help, --help: Show this help text" << std::endl;
     std::cout << "    -v, --v, -version, --version: Display version" << std::endl;
     std::cout << "Example: " << std::endl;
