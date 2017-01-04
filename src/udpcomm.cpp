@@ -41,11 +41,10 @@ static const int SOFTWARE_PATCH_VERSION{0};
     #error "The compiler must define __GNUC__ to use this program, but the compiler does not have it defined"
 #endif
 
-static std::list<const char *> CLIENT_PORT_NUMBER_SWITCHES{"-p", "--p", "-client-port-number", "--client-port-number"};
-static std::list<const char *> CLIENT_HOST_NAME_SWITCHES{"-n", "--n", "-host", "--host", "-host-name", "--host-name", "-client-host-name", "--client-host-name"};
-static std::list<const char *> SERVER_PORT_NUMBER_SWITCHES{"-d", "--d", "-server-port-number", "--server-port-number"};
+static std::list<const char *> CLIENT_PORT_NUMBER_SWITCHES{"-p", "--p", "-port", "--port", "-port-number", "--port-number", "-client-port-number", "--client-port-number"};
+static std::list<const char *> CLIENT_HOST_NAME_SWITCHES{"-n", "--n", "-name", "--name", "-client-name", "--client-name", "-host", "--host", "-host-name", "--host-name", "-client-host-name", "--client-host-name"};
+static std::list<const char *> SERVER_PORT_NUMBER_SWITCHES{"-d", "--d", "-server-port", "--server-port", "-server-port-number", "--server-port-number"};
 static std::list<const char *> CLIENT_RETURN_ADDRESS_PORT_NUMBER_SWITCHES{"-g", "--g", "-client-return-address-port-number", "--client-return-address-port-number"};
-static std::list<const char *> CLIENT_RETURN_ADDRESS_HOST_NAME_SWITCHES{"-a", "--a", "-client-return-address-host-name", "--client-return-address-host-name"};
 
 static std::list<const char *> SEND_ONLY_SWITCHES{"-s", "--s", "-send", "--send", "-send-only", "--send-only"};
 static std::list<const char *> MAXIMUM_READ_SIZE_SWITCHES{"-m", "--m", "-max", "--max", "-max-read", "--max-read", "-max-size", "--max-size", "-max-read-size", "--max-read-size"};
@@ -121,7 +120,6 @@ static std::shared_ptr<UDPServer> udpServer{nullptr};
 static std::string clientHostName{UDPDuplex::s_DEFAULT_CLIENT_HOST_NAME};
 static std::string clientPortNumber{std::to_string(UDPDuplex::s_DEFAULT_CLIENT_PORT_NUMBER)};
 static std::string serverPortNumber{std::to_string(UDPDuplex::s_DEFAULT_SERVER_PORT_NUMBER)};
-static std::string clientReturnAddressHostName{UDPDuplex::s_DEFAULT_CLIENT_RETURN_ADDRESS_HOST_NAME};
 static std::string clientReturnAddressPortNumber{std::to_string(UDPDuplex::s_DEFAULT_CLIENT_RETURN_ADDRESS_PORT_NUMBER)};
 
 bool sendOnly{false};
@@ -172,22 +170,6 @@ int main(int argc, char *argv[])
                 std::cout << "WARNING: Switch " << argv[i] << " accepted, but no client host name was specified after, skipping option" << std::endl;
             } else {
                 clientHostName = stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"");
-            }
-        } else if (isSwitch(argv[i], CLIENT_RETURN_ADDRESS_HOST_NAME_SWITCHES)) {
-            if (argv[i+1]) {
-                clientReturnAddressHostName = argv[i+1];
-            } else {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but no client host name was specified after, skipping option" << std::endl;
-            }
-            i++;
-        } else if (isEqualsSwitch(argv[i], CLIENT_RETURN_ADDRESS_HOST_NAME_SWITCHES)) {
-            std::string copyString{static_cast<std::string>(argv[i])};
-            size_t foundPosition{copyString.find("=")};
-            size_t foundEnd{copyString.substr(foundPosition).find(" ")};
-            if (copyString.substr(foundPosition+1, (foundEnd - foundPosition)) == "") {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but no client host name was specified after, skipping option" << std::endl;
-            } else {
-                clientReturnAddressHostName = stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"");
             }
         } else if (isSwitch(argv[i], CLIENT_PORT_NUMBER_SWITCHES)) {
             if (argv[i+1]) {
