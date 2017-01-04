@@ -674,9 +674,11 @@ void doAtExit()
 void interruptHandler(int signalNumber) 
 {
     std::cout << std::endl << "Exiting " << PROGRAM_NAME << std::endl;
+    /*
     if (udpDuplex) {
         udpDuplex->closePort();
     }
+    */
     _Exit(signalNumber);
 }
 
