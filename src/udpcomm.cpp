@@ -456,9 +456,6 @@ int main(int argc, char *argv[])
     std::cout << "Using ServerPortNumber=";
     prettyPrinter->println(serverPortNumber);
 
-    std::cout << "Using ClientReturnAddressHostName=";
-    prettyPrinter->println(clientReturnAddressHostName);
-
     std::cout << "Using ClientReturnAddressPortNumber=";
     prettyPrinter->println(clientReturnAddressPortNumber);
     
@@ -491,7 +488,6 @@ int main(int argc, char *argv[])
             udpDuplex = std::make_shared<UDPDuplex>(clientHostName,
                                                     std::stoi(clientPortNumber), 
                                                     std::stoi(serverPortNumber),
-                                                    clientReturnAddressHostName,
                                                     std::stoi(clientReturnAddressPortNumber),
                                                     udpObjectType);
         try {
