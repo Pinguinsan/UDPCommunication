@@ -16,6 +16,7 @@
 
 #include <generalutilities.h>
 #include <systemcommand.h>
+#include <mathutilities.h>
 #include <udpduplex.h>
 #include <datetime.h>
 #include <prettyprinter.h>
@@ -120,7 +121,7 @@ static std::shared_ptr<UDPServer> udpServer{nullptr};
 static std::string clientHostName{UDPDuplex::s_DEFAULT_CLIENT_HOST_NAME};
 static std::string clientPortNumber{std::to_string(UDPDuplex::s_DEFAULT_CLIENT_PORT_NUMBER)};
 static std::string serverPortNumber{std::to_string(UDPDuplex::s_DEFAULT_SERVER_PORT_NUMBER)};
-static std::string clientReturnAddressPortNumber{std::to_string(UDPDuplex::s_DEFAULT_CLIENT_RETURN_ADDRESS_PORT_NUMBER)};
+static std::string clientReturnAddressPortNumber{std::to_string(MathUtilities::randomBetween(0, std::numeric_limits<uint16_t>::max()))};
 
 bool sendOnly{false};
 bool receiveOnly{false};
