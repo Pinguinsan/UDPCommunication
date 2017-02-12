@@ -48,9 +48,7 @@ static std::list<const char *> SERVER_PORT_NUMBER_SWITCHES{"-d", "--d", "-server
 static std::list<const char *> CLIENT_RETURN_ADDRESS_PORT_NUMBER_SWITCHES{"-g", "--g", "-client-return-address-port-number", "--client-return-address-port-number"};
 
 static std::list<const char *> SEND_ONLY_SWITCHES{"-s", "--s", "-send", "--send", "-send-only", "--send-only"};
-static std::list<const char *> MAXIMUM_READ_SIZE_SWITCHES{"-m", "--m", "-max", "--max", "-max-read", "--max-read", "-max-size", "--max-size", "-max-read-size", "--max-read-size"};
 static std::list<const char *> LINE_ENDING_SWITCHES{"-e", "--e", "-line-ending", "--line-ending", "-line-endings", "--line-endings"};
-static std::list<const char *> READ_UNTIL_SWITCHES{"-r", "--r", "-read-until", "--read-until"};
 static std::list<const char *> RECEIVE_ONLY_SWITCHES{"-receive", "--receive", "-receive-only", "--receive-only"};
 static std::list<const char *> SYNCHRONOUS_COMMUNICATION_SWITCHES{"-sync", "--sync", "-sync-comm", "--sync-comm"};
 static std::list<const char *> SCRIPT_FILE_SWITCHES{"-c", "--c", "-script", "--script", "-script-file", "--script-file", "-script-name", "--script-name"};
@@ -76,7 +74,7 @@ static const int FLUSH_RESULT_WHITESPACE{4};
 static const int LOOP_RESULT_WHITESPACE{4};
 
 void sendUDPString(const std::string &str);
-std::string doUDPReadString();
+std::string doUDPreadLine();
 UDPObjectType udpObjectType{UDPObjectType::UDP_DUPLEX};
 
 void printRxResult(const std::string &str);
@@ -118,19 +116,16 @@ static std::shared_ptr<UDPDuplex> udpDuplex{nullptr};
 static std::shared_ptr<UDPClient> udpClient{nullptr};
 static std::shared_ptr<UDPServer> udpServer{nullptr};
 
-static std::string clientHostName{UDPDuplex::s_DEFAULT_CLIENT_HOST_NAME};
-static std::string clientPortNumber{std::to_string(UDPDuplex::s_DEFAULT_CLIENT_PORT_NUMBER)};
-static std::string serverPortNumber{std::to_string(UDPDuplex::s_DEFAULT_SERVER_PORT_NUMBER)};
+static std::string clientHostName{UDPDuplex::DEFAULT_CLIENT_HOST_NAME};
+static std::string clientPortNumber{std::to_string(UDPDuplex::DEFAULT_CLIENT_PORT_NUMBER)};
+static std::string serverPortNumber{std::to_string(UDPDuplex::DEFAULT_SERVER_PORT_NUMBER)};
 static std::string clientReturnAddressPortNumber{std::to_string(MathUtilities::randomBetween(0, std::numeric_limits<uint16_t>::max()))};
 
 bool sendOnly{false};
 bool receiveOnly{false};
 bool synchronousCommunication{false};
 std::string previousStringSent{""};
-std::string readUntil{""};
-int maximumReadSize{-1};
-std::string getPrettyLineEndings(const std::string &lineEnding);
-LineEnding lineEndings;
+std::string lineEndings{""};
 
 const uint16_t MAXIMUM_PORT_NUMBER{std::numeric_limits<uint16_t>::max()};
 
@@ -299,11 +294,11 @@ int main(int argc, char *argv[])
                 }
             }
         } else if (isSwitch(argv[i], LINE_ENDING_SWITCHES)) {
-            if (UDPDuplex::lineEndingToString(lineEndings) != "") {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but lineEndings have already been set by another option (" << getPrettyLineEndings(UDPDuplex::lineEndingToString(lineEndings)) << "), skipping option" << std::endl;
+            if (lineEndings != "") {
+                std::cout << "WARNING: Switch " << argv[i] << " accepted, but lineEndings have already been set by another option (" << lineEndings << "), skipping option" << std::endl;
             } else if (argv[i+1]) {
                 try {
-                    lineEndings = UDPDuplex::parseLineEndingFromRaw(static_cast<std::string>(argv[i+1]));
+                    lineEndings = static_cast<std::string>(argv[i+1]);
                 } catch (std::exception &e) {
                     (void)e;
                     std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << std::quoted(argv[i+1]) << " is an invalid line ending, skipping option";
@@ -313,8 +308,8 @@ int main(int argc, char *argv[])
                 std::cout << "WARNING: Switch " << argv[i] << " accepted, but no line endings were specified after, skipping option" << std::endl;
             }
         } else if (isEqualsSwitch(argv[i], LINE_ENDING_SWITCHES)) {
-            if (UDPDuplex::lineEndingToString(lineEndings) != "") {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but lineEndings have already been set by another option (" << getPrettyLineEndings(UDPDuplex::lineEndingToString(lineEndings)) << "), skipping option" << std::endl;
+            if (lineEndings != "") {
+                std::cout << "WARNING: Switch " << argv[i] << " accepted, but lineEndings have already been set by another option (" << lineEndings << "), skipping option" << std::endl;
             } else {
                 std::string copyString{static_cast<std::string>(argv[i])};
                 size_t foundPosition{copyString.find("=")};
@@ -323,51 +318,9 @@ int main(int argc, char *argv[])
                     std::cout << "WARNING: Switch " << argv[i] << " accepted, but no line endings were specified after, skipping option" << std::endl;
                 } else {
                     try {
-                        lineEndings = UDPDuplex::parseLineEndingFromRaw(stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\""));
+                        lineEndings = stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"");
                     } catch (std::exception &e) {
                         std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << std::quoted(stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"")) << " is an invalid line ending option, skipping option" << std::endl;
-                    }
-                }   
-            }
-        } else if (isSwitch(argv[i], MAXIMUM_READ_SIZE_SWITCHES)) {
-             if (maximumReadSize != -1) {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but maximumReadSize have already been set by another option (" << maximumReadSize << "), skipping option" << std::endl;
-            } else if (argv[i+1]) {
-                int tempSize{0};
-                try {
-                    tempSize = std::stoi(static_cast<std::string>(argv[i+1]));
-                } catch (std::exception &e) {
-                    std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << std::quoted(argv[i+1]) << " is not a number, skipping option" << std::endl;
-                }
-                if (tempSize <= 0) {
-                    std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << std::quoted(argv[i+1]) << " is not a positive number, skipping option" << std::endl;
-                } else {
-                    maximumReadSize = tempSize;
-                }
-                i++;
-            } else {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but no size was specified after, skipping option" << std::endl;
-            }
-        } else if (isEqualsSwitch(argv[i], MAXIMUM_READ_SIZE_SWITCHES)) {
-            if (maximumReadSize != -1) {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but maximumReadSize have already been set by another option (" << maximumReadSize << "), skipping option" << std::endl;
-            } else {
-                std::string copyString{static_cast<std::string>(argv[i])};
-                size_t foundPosition{copyString.find("=")};
-                size_t foundEnd{copyString.substr(foundPosition).find(" ")};
-                if (copyString.substr(foundPosition+1, (foundEnd - foundPosition)) == "") {
-                    std::cout << "WARNING: Switch " << argv[i] << " accepted, but no size were specified after, skipping option" << std::endl;
-                } else {
-                    int tempSize{0};
-                    try {
-                        tempSize = std::stoi(stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\""));
-                    } catch (std::exception &e) {
-                        std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << std::quoted(stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"")) << " is not a number, skipping option" << std::endl;
-                    }
-                    if (tempSize <= 0) {
-                        std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << std::quoted(stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"")) << " is not a positive number, skipping option" << std::endl;
-                    } else {
-                        maximumReadSize = tempSize;
                     }
                 }   
             }
@@ -387,28 +340,6 @@ int main(int argc, char *argv[])
             } else {
                 scriptFiles.emplace(stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\""));
             }  
-        } else if (isSwitch(argv[i], READ_UNTIL_SWITCHES)) {
-            if (argv[i+1]) {
-                if (readUntil != "") {
-                    std::cout << "WARNING: Switch " << argv[i] << " accepted, but --read-until switch has already been set to " << readUntil << ", skipping option" << std::endl; 
-                } else {
-                    readUntil = static_cast<std::string>(argv[i+1]);
-                } 
-            } else {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but no read-until string was specified after, skipping option" << std::endl;
-            }
-            i++;
-        } else if (isEqualsSwitch(argv[i], READ_UNTIL_SWITCHES)) {
-            std::string copyString{static_cast<std::string>(argv[i])};
-            size_t foundPosition{copyString.find("=")};
-            size_t foundEnd{copyString.substr(foundPosition).find(" ")};
-            if (copyString.substr(foundPosition+1, (foundEnd - foundPosition)) == "") {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but no read-until string was specified after, skipping option" << std::endl;
-            } else if (readUntil != "") {
-                std::cout << "WARNING: Switch " << argv[i] << " accepted, but --read-until switch has already been set to " << readUntil << ", skipping option" << std::endl; 
-            } else {
-                readUntil = stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"");
-            }
         } else if (isSwitch(argv[i], SEND_ONLY_SWITCHES)) {
             if (receiveOnly) {
                 std::cout << "WARNING: Switch " << argv[i] << " accepted, but ReceiveOnly option is already enabled, skipping option" << std::endl;
@@ -461,17 +392,7 @@ int main(int argc, char *argv[])
     prettyPrinter->println(clientReturnAddressPortNumber);
     
     std::cout << "Using LineEndings=";
-    prettyPrinter->println(getPrettyLineEndings(UDPDuplex::lineEndingToString(lineEndings)));
-
-    if (readUntil != "") {
-        std::cout << "Using ReadUntilString=";
-        prettyPrinter->println(readUntil);
-    }
-
-    if (maximumReadSize != -1) {
-        std::cout << "Using MaximumReadSize=";
-        prettyPrinter->println(maximumReadSize);
-    }
+    prettyPrinter->println(lineEndings);
 
     int i{1};
     for (auto &it : scriptFiles) {
@@ -492,9 +413,6 @@ int main(int argc, char *argv[])
                                                     std::stoi(clientReturnAddressPortNumber),
                                                     udpObjectType);
         try {
-            if (maximumReadSize > 0) {
-                //udpDuplex->setMaximumReadSize(maximumReadSize);
-            }
             udpDuplex->openPort();
         } catch (std::exception &e) {
             std::cout << e.what() << std::endl;
@@ -574,7 +492,7 @@ int main(int argc, char *argv[])
                 if ((stringToSend != "") && (!isWhitespace(stringToSend))) {
                     sendUDPString(stringToSend);
                 }
-                returnString = doUDPReadString();
+                returnString = doUDPreadLine();
                 if (returnString != "") {
                     printRxResult(returnString);
                 }
@@ -681,23 +599,13 @@ std::string asyncStdinTask()
 std::string asyncStdoutTask()
 {
     using namespace GeneralUtilities;
-    if (readUntil == "") {
-        std::string returnString{""};
-        do {
-            if (udpDuplex->available()) {
-                returnString += udpDuplex->readString();
-            }
-        } while ((returnString.length() == 0) || (isWhitespace(returnString)));
-        return returnString;
-    } else {
-        std::string returnString{""};
-        do {
-            if (udpDuplex->available()) {
-                returnString += udpDuplex->readStringUntil(readUntil);
-            }
-        } while ((returnString.length() == 0) || (isWhitespace(returnString)));
-        return returnString;
-    }
+    std::string returnString{""};
+    do {
+        if (udpDuplex->available()) {
+            returnString += udpDuplex->readLine();
+        }
+    } while ((returnString.length() == 0) || (isWhitespace(returnString)));
+    return returnString;
 }
 
 void backspaceTerminal(unsigned int howFar)
@@ -714,26 +622,18 @@ void backspaceTerminal(unsigned int howFar)
     }
 }
 
-std::string doUDPReadString()
+std::string doUDPreadLine()
 {
-    if (readUntil == "") {
-        if (udpDuplex->available()) {
-            return udpDuplex->readString();
-        } else {
-            return "";
-        }
+    if (udpDuplex->available()) {
+        return udpDuplex->readLine();
     } else {
-        if (udpDuplex->available()) {
-            return udpDuplex->readStringUntil(readUntil);
-        } else {
-            return "";
-        }
+        return "";
     }
 }
 
 void sendUDPString(const std::string &str)
 {
-    udpDuplex->writeString(str);
+    udpDuplex->writeLine(str);
     if ((str != "") && (!isWhitespace(str))) {
         previousStringSent = str;
     }
@@ -745,9 +645,6 @@ void printRxResult(const std::string &str)
 {
     using namespace GeneralUtilities;
     std::unique_lock<std::mutex> ioLock{ioMutex};
-    if (str == readUntil) {
-        return;
-    }
     prettyPrinter->setForegroundColor(RX_COLOR);
     std::cout << tWhitespace(RX_RESULT_WHITESPACE);
     prettyPrinter->print("Rx << " + str);
