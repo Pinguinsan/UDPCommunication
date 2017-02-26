@@ -118,12 +118,12 @@ static std::mutex ioMutex;
 
 std::string asyncStdinTask();
 void startAsyncStdinTask(const std::function<std::string(void)> &func);
-static std::unique_ptr<std::shared_future<std::string>> asyncStdinTaskFuture;
+static FuturePtr asyncStdinTaskFuture;
 static std::function<std::string(void)> packagedAsyncStdinTask{asyncStdinTask};
 
 std::string asyncStdoutTask();
 void startAsyncStdoutTask(const std::function<std::string(void)> &func);
-static std::unique_ptr<std::shared_future<std::string>> asyncStdoutTaskFuture;
+static FuturePtr asyncStdoutTaskFuture;
 static std::function<std::string(void)> packagedAsyncStdoutTask{asyncStdoutTask};
 
 static std::function<void(const std::string&)> packagedRxResultTask{printRxResult};

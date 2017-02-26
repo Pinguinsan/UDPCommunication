@@ -1,1 +1,0 @@
-/usr/bin/c++   -O3 -DNDEBUG   CMakeFiles/udpcomm.dir/src/udpcomm.cpp.o  -o udpcomm -rdynamic -ltjlutils -lpthread 
