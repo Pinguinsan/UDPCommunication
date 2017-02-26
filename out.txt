@@ -1,0 +1,56 @@
+Entering directory "/opt/BinaryBuilds/UDPCommunication"...success
+Running cmake from source directory "/opt/GitHub/UDPCommunication"...-- Configuring done
+-- Generating done
+-- Build files have been written to: /opt/BinaryBuilds/UDPCommunication
+success
+Running make...[ 50%] Building CXX object CMakeFiles/udpcomm.dir/src/udpcomm.cpp.o
+/opt/GitHub/UDPCommunication/src/udpcomm.cpp: In function 'void startAsyncStdinTask(const std::function<std::basic_string<char>()>&)':
+/opt/GitHub/UDPCommunication/src/udpcomm.cpp:585:26: error: no match for 'operator=' (operand types are 'std::unique_ptr<std::shared_future<std::basic_string<char> > >' and 'FuturePtr {aka std::unique_ptr<std::future<std::basic_string<char> > >}')
+     asyncStdinTaskFuture = FuturePtr{new StringFuture{std::async(std::launch::async, func)}};
+                          ^
+/opt/GitHub/UDPCommunication/src/udpcomm.cpp:585:26: note: candidates are:
+In file included from /usr/local/include/c++/4.9.x/memory:81:0,
+                 from /opt/GitHub/UDPCommunication/src/udpcomm.cpp:2:
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:249:7: note: std::unique_ptr<_Tp, _Dp>& std::unique_ptr<_Tp, _Dp>::operator=(std::unique_ptr<_Tp, _Dp>&&) [with _Tp = std::shared_future<std::basic_string<char> >; _Dp = std::default_delete<std::shared_future<std::basic_string<char> > >]
+       operator=(unique_ptr&& __u) noexcept
+       ^
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:249:7: note:   no known conversion for argument 1 from 'FuturePtr {aka std::unique_ptr<std::future<std::basic_string<char> > >}' to 'std::unique_ptr<std::shared_future<std::basic_string<char> > >&&'
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:269:2: note: template<class _Up, class _Ep> typename std::enable_if<std::__and_<std::is_convertible<typename std::unique_ptr<_Up, _Ep>::pointer, typename std::unique_ptr<_Tp, _Dp>::_Pointer::type>, std::__not_<std::is_array<_Up> > >::value, std::unique_ptr<_Tp, _Dp>&>::type std::unique_ptr<_Tp, _Dp>::operator=(std::unique_ptr<_Up, _Ep>&&) [with _Up = _Up; _Ep = _Ep; _Tp = std::shared_future<std::basic_string<char> >; _Dp = std::default_delete<std::shared_future<std::basic_string<char> > >]
+  operator=(unique_ptr<_Up, _Ep>&& __u) noexcept
+  ^
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:269:2: note:   template argument deduction/substitution failed:
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h: In substitution of 'template<class _Up, class _Ep> typename std::enable_if<std::__and_<std::is_convertible<typename std::unique_ptr<_Up, _Ep>::pointer, typename std::unique_ptr<_Tp, _Dp>::_Pointer::type>, std::__not_<std::is_array<_Up> > >::value, std::unique_ptr<_Tp, _Dp>&>::type std::unique_ptr<_Tp, _Dp>::operator=(std::unique_ptr<_Up, _Ep>&&) [with _Up = std::future<std::basic_string<char> >; _Ep = std::default_delete<std::future<std::basic_string<char> > >]':
+/opt/GitHub/UDPCommunication/src/udpcomm.cpp:585:26:   required from here
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:269:2: error: no type named 'type' in 'struct std::enable_if<false, std::unique_ptr<std::shared_future<std::basic_string<char> > >&>'
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:278:7: note: std::unique_ptr<_Tp, _Dp>& std::unique_ptr<_Tp, _Dp>::operator=(std::nullptr_t) [with _Tp = std::shared_future<std::basic_string<char> >; _Dp = std::default_delete<std::shared_future<std::basic_string<char> > >; std::nullptr_t = std::nullptr_t]
+       operator=(nullptr_t) noexcept
+       ^
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:278:7: note:   no known conversion for argument 1 from 'FuturePtr {aka std::unique_ptr<std::future<std::basic_string<char> > >}' to 'std::nullptr_t'
+/opt/GitHub/UDPCommunication/src/udpcomm.cpp: In function 'void startAsyncStdoutTask(const std::function<std::basic_string<char>()>&)':
+/opt/GitHub/UDPCommunication/src/udpcomm.cpp:590:27: error: no match for 'operator=' (operand types are 'std::unique_ptr<std::shared_future<std::basic_string<char> > >' and 'FuturePtr {aka std::unique_ptr<std::future<std::basic_string<char> > >}')
+     asyncStdoutTaskFuture = FuturePtr{new StringFuture{std::async(std::launch::async, func)}};
+                           ^
+/opt/GitHub/UDPCommunication/src/udpcomm.cpp:590:27: note: candidates are:
+In file included from /usr/local/include/c++/4.9.x/memory:81:0,
+                 from /opt/GitHub/UDPCommunication/src/udpcomm.cpp:2:
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:249:7: note: std::unique_ptr<_Tp, _Dp>& std::unique_ptr<_Tp, _Dp>::operator=(std::unique_ptr<_Tp, _Dp>&&) [with _Tp = std::shared_future<std::basic_string<char> >; _Dp = std::default_delete<std::shared_future<std::basic_string<char> > >]
+       operator=(unique_ptr&& __u) noexcept
+       ^
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:249:7: note:   no known conversion for argument 1 from 'FuturePtr {aka std::unique_ptr<std::future<std::basic_string<char> > >}' to 'std::unique_ptr<std::shared_future<std::basic_string<char> > >&&'
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:269:2: note: template<class _Up, class _Ep> typename std::enable_if<std::__and_<std::is_convertible<typename std::unique_ptr<_Up, _Ep>::pointer, typename std::unique_ptr<_Tp, _Dp>::_Pointer::type>, std::__not_<std::is_array<_Up> > >::value, std::unique_ptr<_Tp, _Dp>&>::type std::unique_ptr<_Tp, _Dp>::operator=(std::unique_ptr<_Up, _Ep>&&) [with _Up = _Up; _Ep = _Ep; _Tp = std::shared_future<std::basic_string<char> >; _Dp = std::default_delete<std::shared_future<std::basic_string<char> > >]
+  operator=(unique_ptr<_Up, _Ep>&& __u) noexcept
+  ^
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:269:2: note:   template argument deduction/substitution failed:
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h: In substitution of 'template<class _Up, class _Ep> typename std::enable_if<std::__and_<std::is_convertible<typename std::unique_ptr<_Up, _Ep>::pointer, typename std::unique_ptr<_Tp, _Dp>::_Pointer::type>, std::__not_<std::is_array<_Up> > >::value, std::unique_ptr<_Tp, _Dp>&>::type std::unique_ptr<_Tp, _Dp>::operator=(std::unique_ptr<_Up, _Ep>&&) [with _Up = std::future<std::basic_string<char> >; _Ep = std::default_delete<std::future<std::basic_string<char> > >]':
+/opt/GitHub/UDPCommunication/src/udpcomm.cpp:590:27:   required from here
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:269:2: error: no type named 'type' in 'struct std::enable_if<false, std::unique_ptr<std::shared_future<std::basic_string<char> > >&>'
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:278:7: note: std::unique_ptr<_Tp, _Dp>& std::unique_ptr<_Tp, _Dp>::operator=(std::nullptr_t) [with _Tp = std::shared_future<std::basic_string<char> >; _Dp = std::default_delete<std::shared_future<std::basic_string<char> > >; std::nullptr_t = std::nullptr_t]
+       operator=(nullptr_t) noexcept
+       ^
+/usr/local/include/c++/4.9.x/bits/unique_ptr.h:278:7: note:   no known conversion for argument 1 from 'FuturePtr {aka std::unique_ptr<std::future<std::basic_string<char> > >}' to 'std::nullptr_t'
+make[2]: *** [CMakeFiles/udpcomm.dir/src/udpcomm.cpp.o] Error 1
+make[1]: *** [CMakeFiles/udpcomm.dir/all] Error 2
+make: *** [all] Error 2
+failure
+All cleaned up
+make failed, bailing out

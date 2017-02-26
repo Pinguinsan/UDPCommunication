@@ -1,3 +1,21 @@
+/***********************************************************************
+*    udpcomm.cpp:                                                      *
+*    Interface program for communicating over udp                      *
+*    Copyright (c) 2016 Tyler Lewis                                    *
+************************************************************************
+*    This is a source file for UDPCommunication:                       *
+*    https://github.com/Pinguinsan/UDPCommunication                    *
+*    The source code is released under the GNU LGPL                    *
+*    This file holds the main logic for the UDPCommunication program   *
+*    It is used to communicate via a unix UDP socket. It can be used   *
+*    as a receiver (listener), master (sender), or both (duplex),      *
+*    which can be selected via command line options (use -h)           *
+*                                                                      *
+*    You should have received a copy of the GNU Lesser General         *
+*    Public license along with libraryprojects                         *
+*    If not, see <http://www.gnu.org/licenses/>                        *
+***********************************************************************/
+
 #include <iostream>
 #include <memory>
 #include <chrono>
@@ -18,13 +36,11 @@
 #include <systemcommand.h>
 #include <mathutilities.h>
 #include <udpduplex.h>
-#include <datetime.h>
 #include <prettyprinter.h>
 
 #include <tscriptexecutor.h>
 #include <tscriptreader.h>
 
-using namespace DateTime;
 using namespace GeneralUtilities;
 
 static const char *PROGRAM_NAME{"udpcomm"};
@@ -56,7 +72,7 @@ static std::list<const char *> VERSION_SWITCHES{"-v", "--v", "-version", "--vers
 static std::list<const char *> HELP_SWITCHES{"-h", "--h", "-help", "--help"};
 
 
-static std::unique_ptr<PrettyPrinter> prettyPrinter{std::make_unique<PrettyPrinter>()};
+static std::unique_ptr<PrettyPrinter> prettyPrinter{std::unique_ptr<PrettyPrinter>{new PrettyPrinter{}}};
 
 static const BackgroundColor COMMON_BACKGROUND_COLOR{BackgroundColor::BG_DEFAULT};
 static const int COMMON_FONT_ATTRIBUTE{(FontAttribute::FA_BOLD | FontAttribute::FA_UNDERLINED)};
@@ -94,6 +110,9 @@ void displayHelp();
 void displayVersion();
 void doAtExit();
 void interruptHandler(int signalNumber);
+
+using StringFuture = std::future<std::string>;
+using FuturePtr = std::unique_ptr<StringFuture>;
 
 static std::mutex ioMutex;
 
@@ -424,7 +443,7 @@ int main(int argc, char *argv[])
         std::cout << "Successfully opened UDP port ";
         prettyPrinter->println(udpDuplex->portName() + "\n");
         for (auto &it : scriptFiles) {
-            scriptFileMap.emplace(it, std::make_unique<TScriptExecutor>(it));
+            scriptFileMap.emplace(it, std::unique_ptr<TScriptExecutor>{new TScriptExecutor{it}});
         }
         i = 1;
         for (auto &it : scriptFileMap) {
@@ -559,8 +578,8 @@ void displayHelp()
 void displayVersion() 
 {
     std::cout << PROGRAM_NAME << "(" << LONG_PROGRAM_NAME << "), v" << SOFTWARE_MAJOR_VERSION << "." << SOFTWARE_MINOR_VERSION << "." << SOFTWARE_PATCH_VERSION << std::endl;
-    std::cout << "Written by " << AUTHOR_NAME << ", " << currentYear() << std::endl;
-    std::cout << "Built with g++ v" << GCC_MAJOR_VERSION << "." << GCC_MINOR_VERSION << "." << GCC_PATCH_VERSION << ", " << dateStampMDY() << std::endl << std::endl;
+    std::cout << "Written by " << AUTHOR_NAME << ", " << __DATE__ << std::endl;
+    std::cout << "Built with g++ v" << GCC_MAJOR_VERSION << "." << GCC_MINOR_VERSION << "." << GCC_PATCH_VERSION << ", " << __DATE__ << std::endl << std::endl;
 }
 
 void doAtExit()
@@ -581,12 +600,12 @@ void interruptHandler(int signalNumber)
 
 void startAsyncStdinTask(const std::function<std::string(void)> &func)
 {
-    asyncStdinTaskFuture = std::make_unique<std::shared_future<std::string>>(std::async(std::launch::async, func));
+    asyncStdinTaskFuture = FuturePtr{new StringFuture{std::async(std::launch::async, func)}};
 }
 
 void startAsyncStdoutTask(const std::function<std::string(void)> &func)
 {
-    asyncStdoutTaskFuture = std::make_unique<std::shared_future<std::string>>(std::async(std::launch::async, func));
+    asyncStdoutTaskFuture = FuturePtr{new StringFuture{std::async(std::launch::async, func)}};
 }
 
 std::string asyncStdinTask()
