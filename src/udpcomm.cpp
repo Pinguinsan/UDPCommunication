@@ -12,7 +12,7 @@
 *    which can be selected via command line options (use -h)           *
 *                                                                      *
 *    You should have received a copy of the GNU Lesser General         *
-*    Public license along with libraryprojects                         *
+*    Public license along with UDPCommunication                        *
 *    If not, see <http://www.gnu.org/licenses/>                        *
 ***********************************************************************/
 
