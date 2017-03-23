@@ -4,7 +4,7 @@ cmake_minimum_required (VERSION 3.1)
 project(UDPCommunication CXX)
 
 set(CMAKE_BUILD_TYPE Release)
-set(SOURCE_BASE /opt/GitHub/UDPCommunication/)
+set(SOURCE_BASE ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_CXX_STANDARD 14)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
