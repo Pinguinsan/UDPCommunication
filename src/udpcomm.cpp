@@ -71,7 +71,7 @@ static std::list<const char *> SCRIPT_FILE_SWITCHES{"-c", "--c", "-script", "--s
 static std::list<const char *> VERSION_SWITCHES{"-v", "--v", "-version", "--version"};
 static std::list<const char *> HELP_SWITCHES{"-h", "--h", "-help", "--help"};
 
-
+bool isIpAddress(const char *str);
 static std::unique_ptr<PrettyPrinter> prettyPrinter{std::unique_ptr<PrettyPrinter>{new PrettyPrinter{}}};
 
 static const BackgroundColor COMMON_BACKGROUND_COLOR{BackgroundColor::BG_DEFAULT};
@@ -98,6 +98,7 @@ void printTxResult(const std::string &str);
 void printDelayResult(DelayType delayType, int howLong);
 void printFlushResult(FlushType flushType);
 void printLoopResult(LoopType loopType, int currentLoop, int loopCount);
+std::string getPrettyLineEndings(const std::string &lineEnding);
 
 static unsigned int currentCommandHistoryIndex{0};
 static std::list<std::string> commandHistory;
@@ -110,6 +111,7 @@ void displayHelp();
 void displayVersion();
 void doAtExit();
 void interruptHandler(int signalNumber);
+void installSignalHandlers(void (*signalHandler)(int));
 
 using StringFuture = std::future<std::string>;
 using FuturePtr = std::unique_ptr<StringFuture>;
@@ -150,13 +152,7 @@ const uint16_t MAXIMUM_PORT_NUMBER{std::numeric_limits<uint16_t>::max()};
 
 int main(int argc, char *argv[])
 {
-    //Signal handling stuff
-    struct sigaction sigIntHandler;
-    sigIntHandler.sa_handler = interruptHandler;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
-    sigaction(SIGINT, &sigIntHandler, NULL);
-    //End signal handling
+    installSignalHandlers(interruptHandler);
     
     for (int i = 1; i < argc; i++) { 
         if (isSwitch(argv[i], HELP_SWITCHES)) {
@@ -170,7 +166,7 @@ int main(int argc, char *argv[])
     displayVersion();
 
     for (int i = 1; i < argc; i++) {
-        if (isSwitch(argv[i], CLIENT_HOST_NAME_SWITCHES)) {
+        if (isSwitch(argv[i], CLIENT_HOST_NAME_SWITCHES) || isIpAddress(argv[i])) {
             if (argv[i+1]) {
                 clientHostName = argv[i+1];
             } else {
@@ -405,13 +401,17 @@ int main(int argc, char *argv[])
     prettyPrinter->println(clientPortNumber);
     
     std::cout << "Using ServerPortNumber=";
-    prettyPrinter->println(serverPortNumber);
+    if (udpObjectType == UDPObjectType::UDP_SERVER) {
+        prettyPrinter->println(serverPortNumber);
+    } else {
+        prettyPrinter->println(clientReturnAddressPortNumber);
+    }
 
     std::cout << "Using ClientReturnAddressPortNumber=";
     prettyPrinter->println(clientReturnAddressPortNumber);
     
     std::cout << "Using LineEndings=";
-    prettyPrinter->println(lineEndings);
+    prettyPrinter->println(getPrettyLineEndings(lineEndings));
 
     int i{1};
     for (auto &it : scriptFiles) {
@@ -439,7 +439,6 @@ int main(int argc, char *argv[])
         }
         delayMilliseconds(500);
         udpDuplex->setTimeout(25);        
-        long long int TIMEOUT_TIME{400};
         std::cout << "Successfully opened UDP port ";
         prettyPrinter->println(udpDuplex->portName() + "\n");
         for (auto &it : scriptFiles) {
@@ -587,15 +586,40 @@ void doAtExit()
     return interruptHandler(0);
 }
 
-void interruptHandler(int signalNumber) 
+void interruptHandler(int signalNumber)
 {
-    std::cout << std::endl << "Exiting " << PROGRAM_NAME << std::endl;
-    /*
+    if ((signalNumber == SIGUSR1) || (signalNumber == SIGUSR2) || (signalNumber == SIGCHLD)) {
+        return;
+    }
+    std::cout << std::endl << "Caught signal " << signalNumber << " (" << std::strerror(errno) << "), exiting " << PROGRAM_NAME << std::endl;
     if (udpDuplex) {
         udpDuplex->closePort();
     }
-    */
-    _Exit(signalNumber);
+    exit (signalNumber);
+}
+
+void installSignalHandlers(void (*signalHandler)(int))
+{
+    static struct sigaction signalInterruptHandler;
+    signalInterruptHandler.sa_handler = signalHandler;
+    sigemptyset(&signalInterruptHandler.sa_mask);
+    signalInterruptHandler.sa_flags = 0;
+    sigaction(SIGHUP, &signalInterruptHandler, NULL);
+    sigaction(SIGINT, &signalInterruptHandler, NULL);
+    sigaction(SIGQUIT, &signalInterruptHandler, NULL);
+    sigaction(SIGILL, &signalInterruptHandler, NULL);
+    sigaction(SIGABRT, &signalInterruptHandler, NULL);
+    sigaction(SIGFPE, &signalInterruptHandler, NULL);
+    sigaction(SIGPIPE, &signalInterruptHandler, NULL);
+    sigaction(SIGALRM, &signalInterruptHandler, NULL);
+    sigaction(SIGTERM, &signalInterruptHandler, NULL);
+    sigaction(SIGUSR1, &signalInterruptHandler, NULL);
+    sigaction(SIGUSR2, &signalInterruptHandler, NULL);
+    sigaction(SIGCHLD, &signalInterruptHandler, NULL);
+    sigaction(SIGCONT, &signalInterruptHandler, NULL);
+    sigaction(SIGTSTP, &signalInterruptHandler, NULL);
+    sigaction(SIGTTIN, &signalInterruptHandler, NULL);
+    sigaction(SIGTTOU, &signalInterruptHandler, NULL);
 }
 
 void startAsyncStdinTask(const std::function<std::string(void)> &func)
@@ -760,6 +784,11 @@ void printLoopResult(LoopType loopType, int currentLoop, int loopCount)
             }
         }
     }
+}
+
+bool isIpAddress(const char *str)
+{
+
 }
 
 std::string getPrettyLineEndings(const std::string &lineEnding)
