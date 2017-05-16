@@ -4,7 +4,7 @@
 *    Copyright (c) 2016 Tyler Lewis                                    *
 ************************************************************************
 *    This is a source file for UDPCommunication:                       *
-*    https://github.com/Pinguinsan/UDPCommunication                    *
+*    https://github.com/tlewiscpp/UDPCommunication                    *
 *    The source code is released under the GNU LGPL                    *
 *    This file holds the main logic for the UDPCommunication program   *
 *    It is used to communicate via a unix UDP socket. It can be used   *
