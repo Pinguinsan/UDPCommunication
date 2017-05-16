@@ -29,6 +29,7 @@
 #include <set>
 #include <map>
 #include <list>
+#include <queue>
 #include <unistd.h>
 #include <signal.h>
 
@@ -71,7 +72,7 @@ static std::list<const char *> SCRIPT_FILE_SWITCHES{"-c", "--c", "-script", "--s
 static std::list<const char *> VERSION_SWITCHES{"-v", "--v", "-version", "--version"};
 static std::list<const char *> HELP_SWITCHES{"-h", "--h", "-help", "--help"};
 
-bool isIpAddress(const char *str);
+bool isValidIpAddress(const char *str);
 static std::unique_ptr<PrettyPrinter> prettyPrinter{std::unique_ptr<PrettyPrinter>{new PrettyPrinter{}}};
 
 static const BackgroundColor COMMON_BACKGROUND_COLOR{BackgroundColor::BG_DEFAULT};
@@ -92,6 +93,9 @@ static const int LOOP_RESULT_WHITESPACE{4};
 void sendUDPString(const std::string &str);
 std::string doUDPreadLine();
 UDPObjectType udpObjectType{UDPObjectType::UDP_DUPLEX};
+
+int countOccurences(const std::string &str, const std::string &id);
+int getHistoryIndex(const std::string &str);
 
 void printRxResult(const std::string &str);
 void printTxResult(const std::string &str);
@@ -145,7 +149,7 @@ static std::string clientReturnAddressPortNumber{std::to_string(MathUtilities::r
 bool sendOnly{false};
 bool receiveOnly{false};
 bool synchronousCommunication{false};
-std::string previousStringSent{""};
+std::vector<std::string> previousStringSent{};
 std::string lineEndings{""};
 
 const uint16_t MAXIMUM_PORT_NUMBER{std::numeric_limits<uint16_t>::max()};
@@ -166,7 +170,9 @@ int main(int argc, char *argv[])
     displayVersion();
 
     for (int i = 1; i < argc; i++) {
-        if (isSwitch(argv[i], CLIENT_HOST_NAME_SWITCHES) || isIpAddress(argv[i])) {
+        if (isValidIpAddress(argv[i])) {
+            clientHostName = argv[i];
+        } else if (isSwitch(argv[i], CLIENT_HOST_NAME_SWITCHES)) {
             if (argv[i+1]) {
                 clientHostName = argv[i+1];
             } else {
@@ -470,13 +476,12 @@ int main(int argc, char *argv[])
             std::cout << " communication loop, enter desired string and press enter to send strings, or press CTRL+C to quit" << std::endl << std::endl;
             while (true) {
                 std::getline(std::cin, stringToSend);
-                if (stripNonAsciiCharacters(stringToSend).find("[A") == 0) {
-                    stringToSend = previousStringSent;
-                } else {
-                    stringToSend = stripNonAsciiCharacters(stringToSend);
+                stringToSend = stripNonAsciiCharacters(stringToSend);
+                if ((stringToSend.find("[A") == 0) || (stringToSend.find("[B")) == 0) {
+                    stringToSend = previousStringSent.at(getHistoryIndex(stringToSend));
                 }
                 //Strip stupid [B and [C control characters from Cygwin shell
-                for (char i = 'B'; i < 'Z'; i++) {
+                for (char i = 'C'; i < 'Z'; i++) {
                     stringToSend = stripAllFromString(stringToSend, (std::string{1, '['} + std::string{1, static_cast<char>(i)}));
                 }
                 sendUDPString(stringToSend);
@@ -498,13 +503,12 @@ int main(int argc, char *argv[])
             std::cout << " communication loop, enter desired string and press enter to send strings, or press CTRL+C to quit" << std::endl << std::endl;
             while (true) {
                 std::getline(std::cin, stringToSend);
-                if (stripNonAsciiCharacters(stringToSend).find("[A") == 0) {
-                    stringToSend = previousStringSent;
-                } else {
-                    stringToSend = stripNonAsciiCharacters(stringToSend);
+                stringToSend = stripNonAsciiCharacters(stringToSend);
+                if ((stringToSend.find("[A") == 0) || (stringToSend.find("[B")) == 0) {
+                    stringToSend = previousStringSent.at(getHistoryIndex(stringToSend));
                 }
                 //Strip stupid [B and [C control characters from Cygwin shell
-                for (char i = 'B'; i < 'Z'; i++) {
+                for (char i = 'C'; i < 'Z'; i++) {
                     stringToSend = stripAllFromString(stringToSend, (std::string{1, '['} + std::string{1, static_cast<char>(i)}));
                 }
                 if ((stringToSend != "") && (!isWhitespace(stringToSend))) {
@@ -524,13 +528,13 @@ int main(int argc, char *argv[])
             while(true) {
                 if (asyncStdinTaskFuture->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
                     std::string temp{stripNonAsciiCharacters(asyncStdinTaskFuture->get())};
-                    if (temp.find("[A") == 0) {
-                        stringToSend = previousStringSent;
+                    if ((temp.find("[A") == 0) || (temp.find("[B")) == 0) {
+                        stringToSend = getHistoryIndex(temp);
                     } else {
                         stringToSend = temp;
                     }
                     //Strip stupid [B and [C control characters from Cygwin shell
-                    for (char i = 'B'; i < 'Z'; i++) {
+                    for (char i = 'C'; i < 'Z'; i++) {
                         stringToSend = stripAllFromString(stringToSend, (std::string{1, '['} + std::string{1, static_cast<char>(i)}));
                     }
                     sendUDPString(stringToSend);
@@ -548,6 +552,30 @@ int main(int argc, char *argv[])
         return 1;
     }
     return 0;
+}
+
+int countOccurences(const std::string &str, const std::string &id)
+{
+    int counter{0};
+    std::string::size_type start{0};
+    while ((start = str.find(id, start)) != std::string::npos) {
+        counter++;
+        start += id.length();
+    }
+    return counter;
+}
+
+int getHistoryIndex(const std::string &str)
+{
+    int indexPlusCount{countOccurences(str, "[A")};
+    int indexMinusCount{countOccurences(str, "[B")};
+    int rawIndex{indexPlusCount - indexMinusCount};
+    if (rawIndex < 0) {
+        rawIndex = 0;
+    } else if (rawIndex >= previousStringSent.size()) {
+        rawIndex = previousStringSent.size() - 1;
+    }
+    return rawIndex;
 }
 
 void displayHelp() 
@@ -680,7 +708,7 @@ void sendUDPString(const std::string &str)
 {
     udpDuplex->writeLine(str);
     if ((str != "") && (!isWhitespace(str))) {
-        previousStringSent = str;
+        previousStringSent.insert(previousStringSent.begin(), str);
     }
     std::cout << "\033[1A\r"; // Goes back up a line and clears the line
     printTxResult(str);
@@ -786,9 +814,25 @@ void printLoopResult(LoopType loopType, int currentLoop, int loopCount)
     }
 }
 
-bool isIpAddress(const char *str)
+bool isValidIpAddress(const char *str)
 {
-
+    std::string copyString{str};
+    std::vector<std::string> result{GeneralUtilities::parseToContainer<std::vector<std::string>, std::string::const_iterator>(copyString.begin(), copyString.end(), '.')};
+    if (result.size() != 4) {
+        return false;
+    }
+    for (auto &it : result) {
+        try {
+            int test{std::stoi(it)};
+            if ((test < 0) || (test > 255)) {
+                return false;
+            }
+        } catch (std::exception &e) {
+            (void)e;
+            return false;
+        }
+    }
+    return true;
 }
 
 std::string getPrettyLineEndings(const std::string &lineEnding)
