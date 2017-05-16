@@ -624,6 +624,8 @@ std::string asyncStdoutTask()
             returnString += udpDuplex->readLine();
         }
     } while ((returnString.length() == 0) || (isWhitespace(returnString)));
+
+
     return returnString;
 }
 
