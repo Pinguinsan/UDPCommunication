@@ -195,11 +195,11 @@ int main(int argc, char *argv[])
                 try {
                     maybePort = std::stoi(maybePortString);
                     if (maybePort < 0) {
-                        std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a positive number (" << maybePort << " < 0), skipping option" << std::endl;
+                        std::cout << "WARNING: Switch " << tQuoted(argv[i+1]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a positive number (" << maybePort << " < 0), skipping option" << std::endl;
                     } else if (maybePort > MAXIMUM_PORT_NUMBER) {
-                        std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not greater than maximum port number (" << maybePort << " > " << MAXIMUM_PORT_NUMBER << "), skipping option" << std::endl;
+                        std::cout << "WARNING: Switch " << tQuoted(argv[i+1]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not greater than maximum port number (" << maybePort << " > " << MAXIMUM_PORT_NUMBER << "), skipping option" << std::endl;
                     } else {
-                        clientPortNumber = static_cast<std::string>(argv[i]);
+                        clientPortNumber = static_cast<std::string>(maybePortString);
                     }
                 } catch (std::exception &e) {
                     std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
