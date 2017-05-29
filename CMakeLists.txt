@@ -23,9 +23,48 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_ADDITIONAL_COMPILE_FLAGS}")
 endif()
 
-include_directories("${SOURCE_BASE}/include")
+set (UDPCOMM_SOURCES "${SOURCE_BASE}/src/udpcomm.cpp"
+                     "${SOURCE_BASE}/src/udpduplex.cpp"
+                     "${SOURCE_BASE}/src/udpclient.cpp"
+                     "${SOURCE_BASE}/src/udpserver.cpp"
+                     "${SOURCE_BASE}/src/prettyprinter.cpp"
+                     "${SOURCE_BASE}/src/tscriptreader.cpp"
+                     "${SOURCE_BASE}/src/tscriptexecutor.cpp"
+                     "${SOURCE_BASE}/src/tstream.cpp")
 
-set (UDPCOMM_SOURCES "${SOURCE_BASE}/src/udpcomm.cpp")
+ set (UDPCOMM_HEADERS "${SOURCE_BASE}/src/udpduplex.h"
+                      "${SOURCE_BASE}/src/udpclient.h"
+                      "${SOURCE_BASE}/src/udpserver.h"
+                      "${SOURCE_BASE}/src/prettyprinter.h"
+                      "${SOURCE_BASE}/src/tscriptreader.h"
+                      "${SOURCE_BASE}/src/tscriptexecutor.h"
+                      "${SOURCE_BASE}/src/tstream.h")
+
+    #include "tscriptexecutor.h"
+    #include "tscriptreader.h"
+    #include "tstream.h"
  
+if (WIN32)
+    set (UDPCOMM_SOURCES "${SOURCE_BASE}/src/udpcomm.cpp"
+                         "${SOURCE_BASE}/src/udpduplex.cpp"
+                         "${SOURCE_BASE}/src/udpclient.cpp"
+                         "${SOURCE_BASE}/src/udpserver.cpp"
+                         "${SOURCE_BASE}/src/prettyprinter.cpp"
+                         "${SOURCE_BASE}/src/tscriptreader.cpp"
+                         "${SOURCE_BASE}/src/tscriptexecutor.cpp"
+                         "${SOURCE_BASE}/src/tstream.cpp")
+
+     set (UDPCOMM_HEADERS "${SOURCE_BASE}/src/udpduplex.h"
+                          "${SOURCE_BASE}/src/udpclient.h"
+                          "${SOURCE_BASE}/src/udpserver.h"
+                          "${SOURCE_BASE}/src/prettyprinter.h"
+                          "${SOURCE_BASE}/src/tscriptreader.h"
+                          "${SOURCE_BASE}/src/tscriptexecutor.h"
+                          "${SOURCE_BASE}/src/tstream.h")
+
+else()
+    set(UDPCOMM_SOURCES "udpcomm.cpp")
+    target_link_libraries(udpcomm tjlutils pthread)
+endif()
 add_executable(udpcomm ${UDPCOMM_SOURCES})
-target_link_libraries(udpcomm tjlutils pthread)
+
