@@ -155,7 +155,7 @@ static std::shared_ptr<UDPServer> udpServer{nullptr};
 static std::string clientHostName{UDPDuplex::DEFAULT_CLIENT_HOST_NAME};
 static std::string clientPortNumber{std::to_string(UDPDuplex::DEFAULT_CLIENT_PORT_NUMBER)};
 static std::string serverPortNumber{std::to_string(UDPDuplex::DEFAULT_SERVER_PORT_NUMBER)};
-static std::string clientReturnAddressPortNumber{std::to_string(serverPortNumber)};
+static std::string clientReturnAddressPortNumber{serverPortNumber};
 
 static bool sendOnly{false};
 static bool receiveOnly{false};
