@@ -43,6 +43,8 @@
 #include <tscriptexecutor.h>
 #include <tscriptreader.h>
 
+#define SIGNAL_STRING_BUFFER_SIZE 255
+
 using namespace GeneralUtilities;
 
 static const char *PROGRAM_NAME{"udpcomm"};
@@ -52,12 +54,21 @@ static const int SOFTWARE_MAJOR_VERSION{0};
 static const int SOFTWARE_MINOR_VERSION{1};
 static const int SOFTWARE_PATCH_VERSION{0};
 
-#ifdef __GNUC__
-    const int GCC_MAJOR_VERSION{__GNUC__};
-    const int GCC_MINOR_VERSION{__GNUC_MINOR__};
-    const int GCC_PATCH_VERSION{__GNUC_PATCHLEVEL__};
+#if defined(__GNUC__)
+    static const char *COMPILER_NAME{"g++"};
+    static const int COMPILER_MAJOR_VERSION{__GNUC__};
+    static const int COMPILER_MINOR_VERSION{__GNUC_MINOR__};
+    static const int COMPILER_PATCH_VERSION{__GNUC_PATCHLEVEL__};
+#elif defined(_MSC_VER)
+    static const char *COMPILER_NAME{"msvc"};
+    static const int COMPILER_MAJOR_VERSION{_MSC_VER};
+    static const int COMPILER_MINOR_VERSION{0};
+    static const int COMPILER_PATCH_VERSION{0};
 #else
-    #error "The compiler must define __GNUC__ to use this program, but the compiler does not have it defined"
+    static const char *COMPILER_NAME{"unknown"};
+    static const int COMPILER_MAJOR_VERSION{0};
+    static const int COMPILER_MINOR_VERSION{0};
+    static const int COMPILER_PATCH_VERSION{0};
 #endif
 
 static std::list<const char *> CLIENT_PORT_NUMBER_SWITCHES{"-p", "--p", "-port", "--port", "-port-number", "--port-number", "-client-port-number", "--client-port-number"};
@@ -610,9 +621,9 @@ void displayHelp()
 
 void displayVersion() 
 {
-    std::cout << PROGRAM_NAME << "(" << LONG_PROGRAM_NAME << "), v" << SOFTWARE_MAJOR_VERSION << "." << SOFTWARE_MINOR_VERSION << "." << SOFTWARE_PATCH_VERSION << std::endl;
-    std::cout << "Written by " << AUTHOR_NAME << ", " << __DATE__ << std::endl;
-    std::cout << "Built with g++ v" << GCC_MAJOR_VERSION << "." << GCC_MINOR_VERSION << "." << GCC_PATCH_VERSION << ", " << __DATE__ << std::endl << std::endl;
+    std::cout << PROGRAM_NAME << ", v" << SOFTWARE_MAJOR_VERSION << "." << SOFTWARE_MINOR_VERSION << "." << SOFTWARE_PATCH_VERSION << std::endl;
+    std::cout << "Written by " << AUTHOR_NAME << ", " << std::endl;
+    std::cout << "Built with " << COMPILER_NAME << " v" << COMPILER_MAJOR_VERSION << "." << COMPILER_MINOR_VERSION << "." << COMPILER_PATCH_VERSION << ", " << __DATE__ << std::endl << std::endl;
 }
 
 void doAtExit()
@@ -625,7 +636,11 @@ void interruptHandler(int signalNumber)
     if ((signalNumber == SIGUSR1) || (signalNumber == SIGUSR2) || (signalNumber == SIGCHLD)) {
         return;
     }
-    std::cout << std::endl << "Caught signal " << signalNumber << " (" << std::strerror(errno) << "), exiting " << PROGRAM_NAME << std::endl;
+    std::unique_ptr<char[]> signalString{new char[SIGNAL_STRING_BUFFER_SIZE]};
+    memset(signalString.get(), '\0', SIGNAL_STRING_BUFFER_SIZE);
+    signalString.reset(strsignal(signalNumber));
+    std::cout << std::endl << "Caught signal " << signalNumber << " (" << signalString.get() << "), exiting " << PROGRAM_NAME << std::endl;
+
     if (udpDuplex) {
         //udpDuplex->closePort();
     }
