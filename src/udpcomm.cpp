@@ -35,8 +35,6 @@
 #include <signal.h>
 
 #include <generalutilities.h>
-#include <systemcommand.h>
-#include <mathutilities.h>
 #include <udpduplex.h>
 #include <prettyprinter.h>
 
@@ -157,13 +155,13 @@ static std::shared_ptr<UDPServer> udpServer{nullptr};
 static std::string clientHostName{UDPDuplex::DEFAULT_CLIENT_HOST_NAME};
 static std::string clientPortNumber{std::to_string(UDPDuplex::DEFAULT_CLIENT_PORT_NUMBER)};
 static std::string serverPortNumber{std::to_string(UDPDuplex::DEFAULT_SERVER_PORT_NUMBER)};
-static std::string clientReturnAddressPortNumber{std::to_string(MathUtilities::randomBetween(0, std::numeric_limits<uint16_t>::max()))};
+static std::string clientReturnAddressPortNumber{std::to_string(serverPortNumber)};
 
-bool sendOnly{false};
-bool receiveOnly{false};
-bool synchronousCommunication{false};
-std::vector<std::string> previousStringSent{};
-std::string lineEndings{""};
+static bool sendOnly{false};
+static bool receiveOnly{false};
+static bool synchronousCommunication{false};
+static std::vector<std::string> previousStringSent{};
+static std::string lineEndings{""};
 
 const uint16_t MAXIMUM_PORT_NUMBER{std::numeric_limits<uint16_t>::max()};
 
