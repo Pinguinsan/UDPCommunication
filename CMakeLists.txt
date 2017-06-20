@@ -29,12 +29,18 @@ endif()
                      "${SOURCE_BASE}/src/udpserver.cpp"
                      "${SOURCE_BASE}/src/prettyprinter.cpp"
                      "${SOURCE_BASE}/src/tscriptreader.cpp"
+                     "${SOURCE_BASE}/src/generalutilities.cpp"
+                     "${SOURCE_BASE}/src/fileutilities.cpp"
+                     "${SOURCE_BASE}/src/systemcommand.cpp"
                      "${SOURCE_BASE}/src/tscriptexecutor.cpp"
                      "${SOURCE_BASE}/src/tstream.cpp")
 
  set (UDPCOMM_HEADERS "${SOURCE_BASE}/src/udpduplex.h"
                       "${SOURCE_BASE}/src/udpclient.h"
                       "${SOURCE_BASE}/src/udpserver.h"
+                      "${SOURCE_BASE}/src/generalutilities.h"
+                      "${SOURCE_BASE}/src/fileutilities.h"
+                      "${SOURCE_BASE}/src/systemcommand.h"
                       "${SOURCE_BASE}/src/prettyprinter.h"
                       "${SOURCE_BASE}/src/tscriptreader.h"
                       "${SOURCE_BASE}/src/tscriptexecutor.h"
