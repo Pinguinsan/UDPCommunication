@@ -47,7 +47,6 @@ endif()
                       "${SOURCE_BASE}/src/tstream.h")
 add_executable(udpcomm ${UDPCOMM_SOURCES})
 if (NOT WIN32)
-    set(UDPCOMM_SOURCES "udpcomm.cpp")
     target_link_libraries(udpcomm pthread)
 endif()
 
