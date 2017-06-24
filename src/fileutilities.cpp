@@ -16,6 +16,27 @@
 *    If not, see <http://www.gnu.org/licenses/>                        *
 ***********************************************************************/
 
+
+#include <fstream>
+#include <algorithm>
+#include <memory>
+#include <cstdio>
+#include <cstdlib>
+#include <stdexcept>
+#include <exception>
+#include <climits>
+
+#if defined(_WIN32) && !defined(__CYGWIN__)
+    #include <Windows.h>
+    #include "Shlwapi.h"
+    #include <direct.h>
+#else
+    #include <sys/types.h>
+    #include <sys/stat.h>
+	#include <dirent.h>
+    #include <unistd.h>
+#endif
+
 #include "fileutilities.h"
 
 namespace FileUtilities
@@ -23,6 +44,9 @@ namespace FileUtilities
 
     std::vector<std::string> getFileListAsVector(const char *directory, const char *mask, bool caseSensitive)
     {
+        #if defined(_WIN32) && !defined(__CYGWIN__)
+            return std::vector<std::string>{};
+        #else
         if (!directoryExists(directory)) {
             return std::vector<std::string>{};
         }
@@ -52,10 +76,15 @@ namespace FileUtilities
             return std::vector<std::string>{};
         }
         return returnVector;
+        #endif
     }
 
     std::vector<std::string> getDirectoryListAsVector(const char *directory, const char *mask, bool caseSensitive)
     {
+
+        #if defined(_WIN32) && !defined(__CYGWIN__)
+            return std::vector<std::string>{};
+        #else
         if (!directoryExists(directory)) {
             return std::vector<std::string>{};
         }
@@ -85,12 +114,13 @@ namespace FileUtilities
             return std::vector<std::string>{};
         }
         return returnVector;
+        #endif
     }
 
     std::vector<std::string> getPathDirectoriesAsVector()
     {
         std::string temp{static_cast<std::string>(getenv("PATH"))};
-        return GeneralUtilities::parseToContainer<std::vector<std::string>>(temp.begin(), temp.end(), ':');
+        return parseToContainer<std::vector<std::string>>(temp.begin(), temp.end(), ':');
     }
 
     std::list<std::string> getPathDirectories()
@@ -166,13 +196,11 @@ namespace FileUtilities
     std::string getCurrentDirectory()
     {
         #if defined(_WIN32) || defined (__MINGW32__)
-            char* buffer;
-            buffer = _getcwd(NULL, 0);
-            /*Check for null buffer, indicating a failure*/
+            char* buffer{_getcwd(NULL, 0)};
             if (!buffer) {
-                throw std::runtime_error(_CWD_MALLOC_EXCEPTION_STRING);
+                throw std::runtime_error("Could not allocate memory for buffer to determine current working directory");
             } else {
-                return std::string(buffer);
+                return std::string{buffer};
             }
         #else
             char *currentWorkingDirectory;
@@ -181,24 +209,29 @@ namespace FileUtilities
             currentWorkingDirectory = getcwd(filePathBuffer, PATH_MAX + 1 );
             //Check if cwd is null
             if (currentWorkingDirectory) {
-                return std::string(currentWorkingDirectory);
+                return std::string{currentWorkingDirectory};
             } else {
-                throw std::runtime_error(_CWD_MALLOC_EXCEPTION_STRING);
+                throw std::runtime_error("Could not allocate memory for buffer to determine current working directory");
             }
         #endif
     }
 
     bool directoryExists(const std::string &directoryToCheck)
     { 
-        struct stat info;
-        if(stat(directoryToCheck.c_str(), &info) != 0) {
-            return false;
-        } else if(info.st_mode & S_IFDIR)  { 
-            return true;
-        } else {
-            return false;
-        }
-        return directoryExists(directoryToCheck.c_str());
+        #if defined(_WIN32) && !defined(__CYGWIN__)
+            DWORD dwAttrib{GetFileAttributes(directoryToCheck.c_str())};
+            return (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+        #else
+            struct stat info;
+            if(stat(directoryToCheck.c_str(), &info) != 0) {
+                return false;
+            } else if(info.st_mode & S_IFDIR)  { 
+                return true;
+            } else {
+                return false;
+            }
+
+        #endif
     }
 
     bool directoryExists(const char *directoryToCheck)
@@ -208,7 +241,9 @@ namespace FileUtilities
 
     bool fileExists(const std::string &fileToCheck)
     {
-        #if defined(_WIN32) && !defined(__CYGWIN__)
+        #if defined(_WIN32)
+            return (PathFileExists(directoryToCheck.c_str()) == 1);
+            /*
             std::ifstream readFromFile;
             readFromFile.open(fileToCheck);
             if (readFromFile.good()) {
@@ -217,6 +252,7 @@ namespace FileUtilities
             } else {
                 return false;
             }
+            */
         #else
             return (access(fileToCheck.c_str(),F_OK) != -1);
         #endif
@@ -235,20 +271,21 @@ namespace FileUtilities
 
     unsigned int getInstanceCount(const std::string &str)
     {
-        std::unique_ptr<SystemCommand> systemCommand{new SystemCommand()};
-        systemCommand->setCommand("ps aux | grep " + str);
-        systemCommand->execute();
-        if (systemCommand->hasError()) {
-            return 0;
-        } else {
-            return systemCommand->outputAsVector().size()-2;
-        }
+        //std::unique_ptr<SystemCommand> systemCommand{new SystemCommand()};
+        //systemCommand->setCommand("ps aux | grep " + str);
+        //systemCommand->execute();
+        //if (systemCommand->hasError()) {
+        //    return 0;
+        //} else {
+        //    return systemCommand->outputAsVector().size()-2;
+        //}
+        return 0;
     }
 
     std::vector<std::string> parseArgsToVector(int argcIn,char **argvIn) 
     {
         if (argcIn == 0) {
-            throw std::logic_error(_PATL_ARGC_ZERO_EXCEPTION_STRING);
+            throw std::logic_error("argc can never be zero due to the c++ standard, but zero was passed as an argument to parseArgsToList variant");
         }
         std::vector<std::string> returnVector;
         //No need to check, c++ standard ensures argv[0..argc-1] is not null
@@ -261,7 +298,7 @@ namespace FileUtilities
     std::list<std::string> parseArgsToList(int argcIn, char **argvIn)
     {
         if (argcIn == 0) {
-            throw std::logic_error(_PATL_ARGC_ZERO_EXCEPTION_STRING);
+            throw std::logic_error("argc can never be zero due to the c++ standard, but zero was passed as an argument to parseArgsToList variant");
         }
         std::list<std::string> returnList;
         //No need to check, c++ standard ensures argv[0..argc-1] is not null

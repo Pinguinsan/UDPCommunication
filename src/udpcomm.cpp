@@ -31,19 +31,19 @@
 #include <list>
 #include <queue>
 #include <regex>
-#include <unistd.h>
-#include <signal.h>
 
-#include <generalutilities.h>
-#include <udpduplex.h>
-#include <prettyprinter.h>
+#if defined(_WIN32)
+#else
+    #include <unistd.h>
+    #include <signal.h>
 
-#include <tscriptexecutor.h>
-#include <tscriptreader.h>
+#endif
+
+#include "udpduplex.h"
+#include "prettyprinter.h"
+#include "ibytestream.h"
 
 #define SIGNAL_STRING_BUFFER_SIZE 255
-
-using namespace GeneralUtilities;
 
 static const char *PROGRAM_NAME{"udpcomm"};
 static const char *LONG_PROGRAM_NAME{"UDP Communication"};
@@ -82,6 +82,95 @@ static std::list<const char *> SCRIPT_FILE_SWITCHES{"-c", "--c", "-script", "--s
 static std::list<const char *> VERSION_SWITCHES{"-v", "--v", "-version", "--version"};
 static std::list<const char *> HELP_SWITCHES{"-h", "--h", "-help", "--help"};
 
+template <typename T> inline std::string toStdString(const T &t) {
+    return dynamic_cast<std::stringstream &>(std::stringstream{} << t).str();
+}
+
+template <typename T> inline std::string tQuoted(const T &t) {
+    return "\"" + toStdString(t) + "\"";
+}
+
+inline std::string tWhitespace(unsigned int howMany) {
+    return std::string(howMany, ' ');
+}
+
+template<typename Container>
+bool isSwitch(const std::string &switchToCheck, const Container &switches) {
+    std::string copyString{switchToCheck};
+    std::transform(copyString.begin(), copyString.end(), copyString.begin(), ::tolower);
+    for (auto &it : switches) {
+        if ((copyString == static_cast<std::string>(it)) &&
+            (copyString.length() == static_cast<std::string>(it).length()) &&
+            (copyString.find(static_cast<std::string>(it)) == 0)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+template<typename Container>
+bool isSwitch(const char *switchToCheck, const Container &switches) {
+    return isSwitch(static_cast<std::string>(switchToCheck), switches);
+}
+
+template<typename Container>
+bool isEqualsSwitch(const std::string &switchToCheck, const Container &switches) {
+    std::string copyString{switchToCheck};
+    std::transform(copyString.begin(), copyString.end(), copyString.begin(), ::tolower);
+    for (auto &it : switches) {
+        std::string copySwitch{static_cast<std::string>(it) + "="};
+        if ((copyString.find(static_cast<std::string>(it) + "=") == 0)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool endsWith(const std::string &stringToCheck, const std::string &matchString) {
+    return (matchString.size() > stringToCheck.size() ? false : std::equal(matchString.rbegin(), matchString.rend(), stringToCheck.rbegin());
+}
+
+inline bool endsWith(const std::string &stringToCheck, char matchChar) {
+    return endsWith(stringToCheck, std::string(1, matchChar));
+}
+
+inline bool startsWith(const std::string &stringToCheck, const std::string &matchString) {
+   return (stringToCheck.find(matchString) == 0);
+}
+
+inline bool startsWith(const std::string &stringToCheck, char matchChar) {
+   return startsWith(stringToCheck, std::string{1, matchChar});
+} 
+
+inline bool startsWith(const std::string &str, const char *compare) {
+    return startsWith(str, static_cast<std::string>(compare));
+}
+
+
+
+template<typename Container>
+bool isEqualsSwitch(const char *switchToCheck, const Container &switches) {
+    return isEqualsSwitch(static_cast<std::string>(switchToCheck), switches);
+}
+
+template <typename Container, typename InputIter>
+Container parseToContainer(InputIter first, InputIter last, typename std::remove_reference<decltype(*first)>::type delimiter)
+{
+	Container returnContainer;
+	InputIter it;
+	do {
+		it = std::find(first, last, delimiter);
+		typename Container::value_type tempContainer;
+		std::copy(first, it, std::inserter(tempContainer, tempContainer.end()));
+		if (!tempContainer.empty()) {
+			returnContainer.insert(returnContainer.end(), tempContainer);
+		}
+		first = it+1;
+	} while (it != last);
+	return returnContainer;
+}
+
+
 bool isValidIpAddress(const char *str);
 bool isValidWebAddress(const char *str);
 static std::unique_ptr<PrettyPrinter> prettyPrinter{std::unique_ptr<PrettyPrinter>{new PrettyPrinter{}}};
@@ -103,7 +192,7 @@ static const int LOOP_RESULT_WHITESPACE{4};
 
 void sendUDPString(const std::string &str);
 std::string doUDPreadLine();
-UDPObjectType udpObjectType{UDPObjectType::UDP_DUPLEX};
+UDPObjectType udpObjectType{UDPObjectType::Duplex};
 
 int countOccurences(const std::string &str, const std::string &id);
 int getHistoryIndex(const std::string &str);
@@ -119,7 +208,7 @@ static unsigned int currentCommandHistoryIndex{0};
 static std::list<std::string> commandHistory;
 
 static std::set<std::string> scriptFiles;
-static std::map<std::string, std::unique_ptr<TScriptExecutor>> scriptFileMap;
+static std::map<std::string, std::unique_ptr<IByteStreamScriptExecutor>> scriptFileMap;
 
 void backspaceTerminal(unsigned int howFar);
 void displayHelp();
@@ -331,7 +420,7 @@ int main(int argc, char *argv[])
                     lineEndings = static_cast<std::string>(argv[i+1]);
                 } catch (std::exception &e) {
                     (void)e;
-                    std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << std::quoted(argv[i+1]) << " is an invalid line ending, skipping option";
+                    std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << tQuoted(argv[i+1]) << " is an invalid line ending, skipping option";
                 }
                 i++;
             } else {
@@ -350,7 +439,7 @@ int main(int argc, char *argv[])
                     try {
                         lineEndings = stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"");
                     } catch (std::exception &e) {
-                        std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << std::quoted(stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"")) << " is an invalid line ending option, skipping option" << std::endl;
+                        std::cout << "WARNING: Switch " << argv[i] << " accepted, but " << tQuoted(stripAllFromString(copyString.substr(foundPosition+1, (foundEnd - foundPosition)), "\"")) << " is an invalid line ending option, skipping option" << std::endl;
                     }
                 }   
             }
@@ -422,7 +511,7 @@ int main(int argc, char *argv[])
     prettyPrinter->println(clientPortNumber);
     
     std::cout << "Using ServerPortNumber=";
-    if (udpObjectType == UDPObjectType::UDP_SERVER) {
+    if (udpObjectType == UDPObjectType::Server) {
         prettyPrinter->println(serverPortNumber);
     } else {
         prettyPrinter->println(clientReturnAddressPortNumber);
@@ -439,11 +528,11 @@ int main(int argc, char *argv[])
         std::cout << "Using ScriptFile=" << it << " (" << i++ << "/" << scriptFiles.size() << ")" << std::endl;
     }
     if (receiveOnly) {
-        udpObjectType = UDPObjectType::UDP_SERVER;
+        udpObjectType = UDPObjectType::Server;
     } else if (sendOnly) {
-        udpObjectType = UDPObjectType::UDP_CLIENT;
+        udpObjectType = UDPObjectType::Client;
     } else {
-        udpObjectType = UDPObjectType::UDP_DUPLEX;
+        udpObjectType = UDPObjectType::Duplex;
     }
     std::cout << std::endl;
     try {
@@ -463,7 +552,7 @@ int main(int argc, char *argv[])
         std::cout << "Successfully opened UDP port ";
         prettyPrinter->println(udpDuplex->portName() + "\n");
         for (auto &it : scriptFiles) {
-            scriptFileMap.emplace(it, std::unique_ptr<TScriptExecutor>{new TScriptExecutor{it}});
+            scriptFileMap.emplace(it, std::unique_ptr<IByteStreamScriptExecutor>{new IByteStreamScriptExecutor{it}});
         }
         i = 1;
         for (auto &it : scriptFileMap) {
@@ -688,7 +777,6 @@ std::string asyncStdinTask()
 
 std::string asyncStdoutTask()
 {
-    using namespace GeneralUtilities;
     std::string returnString{""};
     do {
         if (!udpDuplex) {
@@ -738,7 +826,6 @@ void sendUDPString(const std::string &str)
 
 void printRxResult(const std::string &str)
 {
-    using namespace GeneralUtilities;
     std::unique_lock<std::mutex> ioLock{ioMutex};
     prettyPrinter->setForegroundColor(RX_COLOR);
     std::cout << tWhitespace(RX_RESULT_WHITESPACE);
@@ -748,7 +835,6 @@ void printRxResult(const std::string &str)
 
 void printTxResult(const std::string &str)
 {
-    using namespace GeneralUtilities;
     std::unique_lock<std::mutex> ioLock{ioMutex};
     prettyPrinter->setForegroundColor(TX_COLOR);
     std::cout << tWhitespace(TX_RESULT_WHITESPACE);
@@ -758,7 +844,6 @@ void printTxResult(const std::string &str)
 
 void printDelayResult(DelayType delayType, int howLong)
 {
-    using namespace GeneralUtilities;
     std::unique_lock<std::mutex> ioLock{ioMutex};
     prettyPrinter->setForegroundColor(DELAY_COLOR);
     std::string stringToPrint{"Delay <> " + std::to_string(howLong)};
@@ -777,7 +862,6 @@ void printDelayResult(DelayType delayType, int howLong)
 
 void printFlushResult(FlushType flushType)
 {
-    using namespace GeneralUtilities;
     std::unique_lock<std::mutex> ioLock{ioMutex};
     prettyPrinter->setForegroundColor(FLUSH_COLOR);
     std::string stringToPrint{"Flush "};
@@ -795,7 +879,6 @@ void printFlushResult(FlushType flushType)
 
 void printLoopResult(LoopType loopType, int currentLoop, int loopCount)
 {
-    using namespace GeneralUtilities;
     std::unique_lock<std::mutex> ioLock{ioMutex};
     prettyPrinter->setForegroundColor(LOOP_COLOR);
     if (loopCount == -1) {
@@ -839,7 +922,7 @@ void printLoopResult(LoopType loopType, int currentLoop, int loopCount)
 bool isValidIpAddress(const char *str)
 {
     std::string copyString{str};
-    std::vector<std::string> result{GeneralUtilities::parseToContainer<std::vector<std::string>, std::string::const_iterator>(copyString.begin(), copyString.end(), '.')};
+    std::vector<std::string> result{parseToContainer<std::vector<std::string>, std::string::const_iterator>(copyString.begin(), copyString.end(), '.')};
     if (result.size() != 4) {
         return false;
     }
@@ -880,7 +963,6 @@ bool isValidWebAddress(const char *str)
 
 std::string getPrettyLineEndings(const std::string &lineEnding)
 {
-    using namespace GeneralUtilities;
     if (lineEnding == "\n") {
         return "\\n (Line Feed)";
     } else if (lineEnding == "\r") {

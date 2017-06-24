@@ -25,26 +25,17 @@ endif()
 
  set (UDPCOMM_SOURCES "${SOURCE_BASE}/src/udpcomm.cpp"
                      "${SOURCE_BASE}/src/udpduplex.cpp"
-                     "${SOURCE_BASE}/src/udpclient.cpp"
-                     "${SOURCE_BASE}/src/udpserver.cpp"
                      "${SOURCE_BASE}/src/prettyprinter.cpp"
-                     "${SOURCE_BASE}/src/tscriptreader.cpp"
-                     "${SOURCE_BASE}/src/generalutilities.cpp"
                      "${SOURCE_BASE}/src/fileutilities.cpp"
                      "${SOURCE_BASE}/src/systemcommand.cpp"
-                     "${SOURCE_BASE}/src/tscriptexecutor.cpp"
-                     "${SOURCE_BASE}/src/tstream.cpp")
+                     "${SOURCE_BASE}/src/ibytestream.cpp")
 
  set (UDPCOMM_HEADERS "${SOURCE_BASE}/src/udpduplex.h"
-                      "${SOURCE_BASE}/src/udpclient.h"
-                      "${SOURCE_BASE}/src/udpserver.h"
-                      "${SOURCE_BASE}/src/generalutilities.h"
                       "${SOURCE_BASE}/src/fileutilities.h"
                       "${SOURCE_BASE}/src/systemcommand.h"
                       "${SOURCE_BASE}/src/prettyprinter.h"
-                      "${SOURCE_BASE}/src/tscriptreader.h"
-                      "${SOURCE_BASE}/src/tscriptexecutor.h"
-                      "${SOURCE_BASE}/src/tstream.h")
+                      "${SOURCE_BASE}/src/ibytestream.h")
+
 add_executable(udpcomm ${UDPCOMM_SOURCES})
 if (NOT WIN32)
     target_link_libraries(udpcomm pthread)
