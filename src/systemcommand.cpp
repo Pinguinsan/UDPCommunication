@@ -18,7 +18,80 @@
 *    If not, see <http://www.gnu.org/licenses/>                        *
 ***********************************************************************/
 
+#include <cstring>
+#include <limits>
+#include <iostream>
+#include <cstdlib>
+#include <fstream>
+#include <ctime>
+#include <cstdio>
+#include <cassert>
+#include <functional>
+
 #include "systemcommand.h"
+
+namespace SystemCommandUtilities
+{
+
+    template<typename Container, typename T, typename Function>
+    void addFormattedThing(Container &container, const T &thingToAdd, Function function) {
+        static_assert(std::is_same<typename std::decay<decltype(*(std::begin(
+                container)))>::type, typename std::decay<T>::type>::value,
+                        "The object to add must dereference to the same type as the container contents");
+        container.push_back(function(thingToAdd));
+    }
+
+    std::string stripFromString(const std::string &stringToStrip, const std::string &whatToStrip) {
+        std::string returnString{stringToStrip};
+        if (returnString.find(whatToStrip) == std::string::npos) {
+            return returnString;
+        }
+        size_t foundPosition{stringToStrip.find(whatToStrip)};
+        if (foundPosition == 0) {
+            returnString = returnString.substr(whatToStrip.length());
+        } else if (foundPosition == (returnString.length() - whatToStrip.length())) {
+            returnString = returnString.substr(0, foundPosition);
+        } else {
+            returnString = returnString.substr(0, foundPosition) + returnString.substr(foundPosition+whatToStrip.length());
+        }
+        return returnString;
+    }
+
+    std::string stripFromString(const std::string &stringToStrip, char whatToStrip) {
+        return stripFromString(stringToStrip, std::string(1, whatToStrip));
+    }
+    std::string stripFromString(const std::string &stringToStrip, const char *whatToStrip) {
+        return stripFromString(stringToStrip, std::string{whatToStrip});
+    }
+    std::string stripAllFromString(const std::string &stringToStrip, const std::string &whatToStrip) {
+        std::string returnString = stringToStrip;
+        if (returnString.find(whatToStrip) == std::string::npos) {
+            return returnString;
+        }
+        while (returnString.find(whatToStrip) != std::string::npos) {
+            returnString = stripFromString(returnString, whatToStrip);
+        }
+        return returnString;
+    }
+
+    std::string stripAllFromString(const std::string &stringToStrip, const char *whatToStrip) {
+        return stripAllFromString(stringToStrip, std::string{whatToStrip});
+    }
+
+    std::string stripAllFromString(const std::string &stringToStrip, char whatToStrip) {
+        return stripAllFromString(stringToStrip, std::string(1, whatToStrip));
+    }
+
+    template <typename T> inline std::string toStdString(const T &t) {
+        return dynamic_cast<std::stringstream &>(std::stringstream{} << t).str();
+    }
+
+    template <typename T> inline std::string tQuoted(const T &t) {
+        return "\"" + toStdString(t) + "\"";
+    }
+}
+
+using namespace SystemCommandUtilities;
 
 const int SystemCommand::m_DEFAULT_MAX_OUTPUT = 2147483647;
 
@@ -154,7 +227,6 @@ void SystemCommand::executeWithoutPipe()
 
 std::string SystemCommand::stripPipeFromCommand(const std::string &command)
 {
-    using namespace GeneralUtilities;
     std::string returnString{command};
     #if defined(_WIN32) && defined(_MSC_VER)
         returnString = stripAllFromString(this->m_command, "2>&1");
@@ -213,7 +285,6 @@ int SystemCommand::pcloseHandler(FILE *fp)
 
 void SystemCommand::systemCommandLaunch(PipeStatus pipe)
 {
-    using namespace GeneralUtilities;
     this->m_command = stripPipeFromCommand(this->m_command);
     if (this->m_repeatCommand) {
         this->m_hasError = false;
@@ -230,7 +301,7 @@ void SystemCommand::systemCommandLaunch(PipeStatus pipe)
 
         fp = popenHandler(this->m_command.c_str(), "r");
         if (fp == NULL) {
-            std::cout << "ERROR: Failed to execute command " << GeneralUtilities::tQuoted(this->m_command) << std::endl;
+            std::cout << "ERROR: Failed to execute command " << tQuoted(this->m_command) << std::endl;
             this->m_returnValue = -1;
             return;
         }

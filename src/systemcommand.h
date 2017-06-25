@@ -31,20 +31,10 @@
     #endif
 #endif
 
-#include <iostream>
-#include <cstdlib>
-#include <fstream>
 #include <string>
 #include <vector>
 #include <sstream>
-#include <limits>
-#include <ctime>
-#include <cstdio>
-#include <cassert>
 #include <memory>
-#include <cstring>
-#include <functional>
-#include "generalutilities.h"
 
 #ifndef PATH_MAX
     #define PATH_MAX 128

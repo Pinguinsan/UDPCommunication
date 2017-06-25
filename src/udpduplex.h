@@ -38,6 +38,11 @@
     #include <sys/types.h>
     #include <sys/socket.h>
     #include <net/if.h>
+    #include <netdb.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+    #include <signal.h>
 #endif //defined(_WIN32)
 
 #include "ibytestream.h"
@@ -347,151 +352,6 @@ private:
     static constexpr bool isValidPortNumber(int portNumber);
 };
 
-
-inline bool endsWith(const std::string &stringToCheck, const std::string &matchString)
-{
-    return (matchString.size() > stringToCheck.size()) ? false : std::equal(matchString.rbegin(), matchString.rend(), stringToCheck.rbegin());
-}
-
-inline bool endsWith(const std::string &stringToCheck, char matchChar)
-{
-    return endsWith(stringToCheck, std::string(1, matchChar));
-}
-
-template <typename T> static inline std::string toStdString(const T &t) { 
-    return dynamic_cast<std::stringstream &>(std::stringstream{} << t).str(); 
-}
-template <typename T> static inline std::string tQuoted(const T &t) {
-    return "\"" + toStdString(t) + "\"";
-}
-
-template<typename T, typename TLow, typename THigh>
-T doUserEnterNumericParameter(const std::string &name,
-                                const std::function<bool(T)> &validator,
-                                TLow lowLimit,
-                                THigh highLimit) {
-    std::cout << std::endl;
-    std::string userOption{""};
-    while (true) {
-        userOption = "";
-        std::cout << "Enter a number to use for " << tQuoted(name) <<
-        " between (inclusive) " << lowLimit << " and " << highLimit <<
-        ", or press CTRL+C to quit: ";
-        std::getline(std::cin, userOption);
-        if (userOption == "") {
-            continue;
-        }
-        int userEntry{0};
-        try {
-            userEntry = std::stoi(userOption);
-            if (userEntry < lowLimit) {
-                std::cout << tQuoted(userEntry) << " is less than the minimum value for " <<
-                name << " (" << name << " < " << lowLimit << std::endl << std::endl;
-                continue;
-            } else if (userEntry > highLimit) {
-                std::cout << tQuoted(userEntry) <<
-                " is greater than the maximum value for " << name << " (" << name <<
-                " > " << highLimit << std::endl << std::endl;
-                continue;
-            } else if (!validator(userEntry)) {
-                std::cout << tQuoted(userEntry) << " is an invalid " << name << std::endl <<
-                std::endl;
-                continue;
-            }
-            return userEntry;
-        } catch (std::exception &e) {
-            std::cout << tQuoted(userOption) << " is not a number" << std::endl <<
-            std::endl;
-        }
-    }
-}
-
-template<typename T>
-std::string doUserEnterStringParameter(const T &name,
-                                        const std::function<bool(std::string)> &validator) {
-    std::cout << std::endl;
-    std::string userOption{""};
-    while (true) {
-        userOption = "";
-        std::cout << "Please enter a string to use for " << tQuoted(name) <<
-        ", or press CTRL+C to quit: ";
-        std::getline(std::cin, userOption);
-        if (userOption == "") {
-            continue;
-        }
-        try {
-            if (!validator(userOption)) {
-                std::cout << tQuoted(userOption) << " is an invalid " << name <<
-                std::endl << std::endl;
-                continue;
-            }
-            return userOption;
-        } catch (std::exception &e) {
-            std::cout << tQuoted(userOption) << " is an invalid " << name << std::endl <<
-            std::endl;
-        }
-    }
-}
-
-template<typename T, typename TOps>
-T doUserSelectParameter(const std::string &name,
-                        const std::function<T(const std::string &)> &func,
-                        const std::vector<TOps> &availableOptions,
-                        const char *defaultOption) {
-    std::cout << std::endl;
-    if (availableOptions.size() == 0) {
-        throw std::runtime_error("No " + name + " are available");
-    } else if (availableOptions.size() == 1) {
-        return func(availableOptions.at(0));
-    }
-    unsigned int quitOption{0};
-    for (unsigned int selectionIndex = 1;
-            selectionIndex <= availableOptions.size(); selectionIndex++) {
-        std::cout << selectionIndex << ".) " << availableOptions.at(selectionIndex - 1);
-        if (static_cast<std::string>(availableOptions.at(selectionIndex - 1)) ==
-            static_cast<std::string>(defaultOption)) {
-            std::cout << "    <----DEFAULT" << std::endl;
-        } else {
-            std::cout << std::endl;
-        }
-        quitOption = selectionIndex + 1;
-    }
-    std::cout << quitOption << ".) Quit" << std::endl << std::endl;
-    std::string userOption{""};
-    while (true) {
-        userOption = "";
-        std::cout << "Select a " << name <<
-        " from the above options, or press CTRL+C to quit: ";
-        std::getline(std::cin, userOption);
-        if (userOption == "") {
-            return func(defaultOption);
-        }
-        unsigned int userOptionIndex{0};
-        bool userSelectedQuit{false};
-        try {
-            userOptionIndex = std::stoi(userOption);
-            if (userOptionIndex > availableOptions.size() + 1) {
-                std::cout << tQuoted(userOption) <<
-                " wasn't one of the selections, please a number between (inclusive) 1 and " <<
-                quitOption << ", or press CTRL+C to quit" << std::endl << std::endl;
-                continue;
-            }
-            if (userOptionIndex == quitOption) {
-                userSelectedQuit = true;
-                throw std::invalid_argument(
-                        "In GeneralUtilities::doUserSelectParameter(): User selected quit option");
-            }
-            return func(availableOptions.at(userOptionIndex - 1));
-        } catch (std::exception &e) {
-            if (userSelectedQuit) {
-                throw e;
-            }
-            std::cout << tQuoted(userOption) <<
-            " wasn't one of the selections, enter a number between (inclusive) 1 and " <<
-            quitOption << ", or press CTRL+C to quit" << std::endl << std::endl;
-        }
-    }
-}
 
 
 #endif //TJLUTILS_UDPDUPLEX_H

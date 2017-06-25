@@ -18,15 +18,6 @@
 *    If not, see <http://www.gnu.org/licenses/>                        *
 ***********************************************************************/
 
-#if defined(_WIN32)
-
-#else
-    #include <netdb.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-    #include <unistd.h>
-    #include <signal.h>
-#endif //defined(_WIN32)
 
 #include <algorithm>
 #include <cerrno>
@@ -34,6 +25,151 @@
 #include <memory.h>
 
 #include "udpduplex.h"
+
+inline bool endsWith(const std::string &stringToCheck, const std::string &matchString)
+{
+    return (matchString.size() > stringToCheck.size()) ? false : std::equal(matchString.rbegin(), matchString.rend(), stringToCheck.rbegin());
+}
+
+inline bool endsWith(const std::string &stringToCheck, char matchChar)
+{
+    return endsWith(stringToCheck, std::string(1, matchChar));
+}
+
+template <typename T> static inline std::string toStdString(const T &t) { 
+    return dynamic_cast<std::stringstream &>(std::stringstream{} << t).str(); 
+}
+template <typename T> static inline std::string tQuoted(const T &t) {
+    return "\"" + toStdString(t) + "\"";
+}
+
+template<typename T, typename TLow, typename THigh>
+T doUserEnterNumericParameter(const std::string &name,
+                                const std::function<bool(T)> &validator,
+                                TLow lowLimit,
+                                THigh highLimit) {
+    std::cout << std::endl;
+    std::string userOption{""};
+    while (true) {
+        userOption = "";
+        std::cout << "Enter a number to use for " << tQuoted(name) <<
+        " between (inclusive) " << lowLimit << " and " << highLimit <<
+        ", or press CTRL+C to quit: ";
+        std::getline(std::cin, userOption);
+        if (userOption == "") {
+            continue;
+        }
+        int userEntry{0};
+        try {
+            userEntry = std::stoi(userOption);
+            if (userEntry < lowLimit) {
+                std::cout << tQuoted(userEntry) << " is less than the minimum value for " <<
+                name << " (" << name << " < " << lowLimit << std::endl << std::endl;
+                continue;
+            } else if (userEntry > highLimit) {
+                std::cout << tQuoted(userEntry) <<
+                " is greater than the maximum value for " << name << " (" << name <<
+                " > " << highLimit << std::endl << std::endl;
+                continue;
+            } else if (!validator(userEntry)) {
+                std::cout << tQuoted(userEntry) << " is an invalid " << name << std::endl <<
+                std::endl;
+                continue;
+            }
+            return userEntry;
+        } catch (std::exception &e) {
+            std::cout << tQuoted(userOption) << " is not a number" << std::endl <<
+            std::endl;
+        }
+    }
+}
+
+template<typename T>
+std::string doUserEnterStringParameter(const T &name,
+                                        const std::function<bool(std::string)> &validator) {
+    std::cout << std::endl;
+    std::string userOption{""};
+    while (true) {
+        userOption = "";
+        std::cout << "Please enter a string to use for " << tQuoted(name) <<
+        ", or press CTRL+C to quit: ";
+        std::getline(std::cin, userOption);
+        if (userOption == "") {
+            continue;
+        }
+        try {
+            if (!validator(userOption)) {
+                std::cout << tQuoted(userOption) << " is an invalid " << name <<
+                std::endl << std::endl;
+                continue;
+            }
+            return userOption;
+        } catch (std::exception &e) {
+            std::cout << tQuoted(userOption) << " is an invalid " << name << std::endl <<
+            std::endl;
+        }
+    }
+}
+
+template<typename T, typename TOps>
+T doUserSelectParameter(const std::string &name,
+                        const std::function<T(const std::string &)> &func,
+                        const std::vector<TOps> &availableOptions,
+                        const char *defaultOption) {
+    std::cout << std::endl;
+    if (availableOptions.size() == 0) {
+        throw std::runtime_error("No " + name + " are available");
+    } else if (availableOptions.size() == 1) {
+        return func(availableOptions.at(0));
+    }
+    unsigned int quitOption{0};
+    for (unsigned int selectionIndex = 1;
+            selectionIndex <= availableOptions.size(); selectionIndex++) {
+        std::cout << selectionIndex << ".) " << availableOptions.at(selectionIndex - 1);
+        if (static_cast<std::string>(availableOptions.at(selectionIndex - 1)) ==
+            static_cast<std::string>(defaultOption)) {
+            std::cout << "    <----DEFAULT" << std::endl;
+        } else {
+            std::cout << std::endl;
+        }
+        quitOption = selectionIndex + 1;
+    }
+    std::cout << quitOption << ".) Quit" << std::endl << std::endl;
+    std::string userOption{""};
+    while (true) {
+        userOption = "";
+        std::cout << "Select a " << name <<
+        " from the above options, or press CTRL+C to quit: ";
+        std::getline(std::cin, userOption);
+        if (userOption == "") {
+            return func(defaultOption);
+        }
+        unsigned int userOptionIndex{0};
+        bool userSelectedQuit{false};
+        try {
+            userOptionIndex = std::stoi(userOption);
+            if (userOptionIndex > availableOptions.size() + 1) {
+                std::cout << tQuoted(userOption) <<
+                " wasn't one of the selections, please a number between (inclusive) 1 and " <<
+                quitOption << ", or press CTRL+C to quit" << std::endl << std::endl;
+                continue;
+            }
+            if (userOptionIndex == quitOption) {
+                userSelectedQuit = true;
+                throw std::invalid_argument(
+                        "In GeneralUtilities::doUserSelectParameter(): User selected quit option");
+            }
+            return func(availableOptions.at(userOptionIndex - 1));
+        } catch (std::exception &e) {
+            if (userSelectedQuit) {
+                throw e;
+            }
+            std::cout << tQuoted(userOption) <<
+            " wasn't one of the selections, enter a number between (inclusive) 1 and " <<
+            quitOption << ", or press CTRL+C to quit" << std::endl << std::endl;
+        }
+    }
+}
 
 const uint16_t UDPServer::BROADCAST{1};
 
@@ -45,13 +181,11 @@ UDPServer::UDPServer() :
 
 UDPServer::UDPServer(uint16_t portNumber) :
     m_socketAddress{},
-    m_setSocketResult{0},
     m_isListening{false},
+    m_setSocketResult{0},
     m_timeout{UDPServer::DEFAULT_TIMEOUT},
     m_datagramQueue{},
-    m_ioMutex{},
-    m_shutEmDown{false},
-    m_lineEnding{""}
+    m_shutEmDown{false}
 {
     this->initialize(portNumber);
 }
@@ -688,8 +822,8 @@ UDPClient::UDPClient(const std::string &hostName, uint16_t portNumber) :
 UDPClient::UDPClient(const std::string &hostName, uint16_t portNumber, uint16_t returnAddressPortNumber) :
     m_destinationAddress{},
     m_returnAddress{},
-    m_timeout{DEFAULT_TIMEOUT},
     m_udpSocketIndex{0},
+    m_timeout{DEFAULT_TIMEOUT},
     m_lineEnding{DEFAULT_LINE_ENDING}
 {
     this->initialize(hostName,
@@ -882,7 +1016,7 @@ bool constexpr UDPClient::isValidPortNumber(int portNumber)
 
 std::string UDPClient::doUserSelectHostName()
 {
-    return doUserEnterStringParameter("Client Host Name", [](std::string str) -> bool { return (str.length() != 0); });
+    return doUserEnterStringParameter("Client Host Name", [](std::string str) -> bool { return true; });
                                                         //TODO: Add validation for host name
 } 
 
@@ -977,8 +1111,8 @@ UDPDuplex::UDPDuplex(const std::string &clientHostName, uint16_t clientPortNumbe
 
 
 UDPDuplex::UDPDuplex(const std::string &clientHostName, uint16_t clientPortNumber, uint16_t serverPortNumber, uint16_t clientReturnAddressPortNumber, UDPObjectType udpObjectType) :
-    m_udpServer{nullptr},
     m_udpClient{nullptr},
+    m_udpServer{nullptr},
     m_udpObjectType{udpObjectType}
 {
     if ((this->m_udpObjectType == UDPObjectType::Client) || (this->m_udpObjectType == UDPObjectType::Duplex)) {
@@ -1496,18 +1630,3 @@ std::string UDPDuplex::udpObjectTypeToString(UDPObjectType udpObjectType)
         throw std::runtime_error("Unknown UDPObjectType passed to UDPDuplex::udpObjectTypeToString(UDPObjectType)");
     }
 }
-
-/*
-bool endsWith(const std::string &stringToCheck, const std::string &matchString)
-{
-    if (matchString.size() > stringToCheck.size()) {
-        return false;
-    }
-    return std::equal(matchString.rbegin(), matchString.rend(), stringToCheck.rbegin());
-}
-
-bool endsWith(const std::string &stringToCheck, char matchChar)
-{
-    return endsWith(stringToCheck, std::string(1, matchChar));
-}
-*/

@@ -82,94 +82,152 @@ static std::list<const char *> SCRIPT_FILE_SWITCHES{"-c", "--c", "-script", "--s
 static std::list<const char *> VERSION_SWITCHES{"-v", "--v", "-version", "--version"};
 static std::list<const char *> HELP_SWITCHES{"-h", "--h", "-help", "--help"};
 
-template <typename T> inline std::string toStdString(const T &t) {
-    return dynamic_cast<std::stringstream &>(std::stringstream{} << t).str();
-}
+namespace UDPCommunicationUtilities {
 
-template <typename T> inline std::string tQuoted(const T &t) {
-    return "\"" + toStdString(t) + "\"";
-}
-
-inline std::string tWhitespace(unsigned int howMany) {
-    return std::string(howMany, ' ');
-}
-
-template<typename Container>
-bool isSwitch(const std::string &switchToCheck, const Container &switches) {
-    std::string copyString{switchToCheck};
-    std::transform(copyString.begin(), copyString.end(), copyString.begin(), ::tolower);
-    for (auto &it : switches) {
-        if ((copyString == static_cast<std::string>(it)) &&
-            (copyString.length() == static_cast<std::string>(it).length()) &&
-            (copyString.find(static_cast<std::string>(it)) == 0)) {
-            return true;
-        }
+    template <typename T> inline std::string toStdString(const T &t) {
+        return dynamic_cast<std::stringstream &>(std::stringstream{} << t).str();
     }
-    return false;
-}
 
-template<typename Container>
-bool isSwitch(const char *switchToCheck, const Container &switches) {
-    return isSwitch(static_cast<std::string>(switchToCheck), switches);
-}
-
-template<typename Container>
-bool isEqualsSwitch(const std::string &switchToCheck, const Container &switches) {
-    std::string copyString{switchToCheck};
-    std::transform(copyString.begin(), copyString.end(), copyString.begin(), ::tolower);
-    for (auto &it : switches) {
-        std::string copySwitch{static_cast<std::string>(it) + "="};
-        if ((copyString.find(static_cast<std::string>(it) + "=") == 0)) {
-            return true;
-        }
+    template <typename T> inline std::string tQuoted(const T &t) {
+        return "\"" + toStdString(t) + "\"";
     }
-    return false;
+
+    inline std::string tWhitespace(unsigned int howMany) {
+        return std::string(howMany, ' ');
+    }
+
+
+    template<typename Container>
+    bool isSwitch(const std::string &switchToCheck, const Container &switches) {
+        std::string copyString{switchToCheck};
+        std::transform(copyString.begin(), copyString.end(), copyString.begin(), ::tolower);
+        for (auto &it : switches) {
+            if ((copyString == static_cast<std::string>(it)) &&
+                (copyString.length() == static_cast<std::string>(it).length()) &&
+                (copyString.find(static_cast<std::string>(it)) == 0)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    template<typename Container>
+    bool isSwitch(const char *switchToCheck, const Container &switches) {
+        return isSwitch(static_cast<std::string>(switchToCheck), switches);
+    }
+
+    template<typename Container>
+    bool isEqualsSwitch(const std::string &switchToCheck, const Container &switches) {
+        std::string copyString{switchToCheck};
+        std::transform(copyString.begin(), copyString.end(), copyString.begin(), ::tolower);
+        for (auto &it : switches) {
+            std::string copySwitch{static_cast<std::string>(it) + "="};
+            if ((copyString.find(static_cast<std::string>(it) + "=") == 0)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    inline bool endsWith(const std::string &stringToCheck, const std::string &matchString) {
+        return (matchString.size() > stringToCheck.size() ? false : std::equal(matchString.rbegin(), matchString.rend(), stringToCheck.rbegin()));
+    }
+
+    inline bool endsWith(const std::string &stringToCheck, char matchChar) {
+        return endsWith(stringToCheck, std::string(1, matchChar));
+    }
+
+    inline bool startsWith(const std::string &stringToCheck, const std::string &matchString) {
+       return (stringToCheck.find(matchString) == 0);
+    }
+
+    inline bool startsWith(const std::string &stringToCheck, char matchChar) {
+       return startsWith(stringToCheck, std::string{1, matchChar});
+    }
+
+    inline bool startsWith(const std::string &str, const char *compare) {
+        return startsWith(str, static_cast<std::string>(compare));
+    }
+
+    std::string  stripNonAsciiCharacters(const std::string &str) {
+        std::string returnString{""};
+        std::copy_if(str.begin(), str.end(), std::back_inserter(returnString), ::isalnum);
+        return returnString;
+    }
+
+    inline void delayMilliseconds(unsigned long long howLong) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(howLong));
+    }
+
+    template<typename Container>
+    bool isEqualsSwitch(const char *switchToCheck, const Container &switches) {
+        return isEqualsSwitch(static_cast<std::string>(switchToCheck), switches);
+    }
+
+    template <typename Container, typename InputIter>
+    Container parseToContainer(InputIter first, InputIter last, typename std::remove_reference<decltype(*first)>::type delimiter)
+    {
+        Container returnContainer;
+        InputIter it;
+        do {
+            it = std::find(first, last, delimiter);
+            typename Container::value_type tempContainer;
+            std::copy(first, it, std::inserter(tempContainer, tempContainer.end()));
+            if (!tempContainer.empty()) {
+                returnContainer.insert(returnContainer.end(), tempContainer);
+            }
+            first = it+1;
+        } while (it != last);
+        return returnContainer;
+    }
+
+    std::string stripFromString(const std::string &stringToStrip, const std::string &whatToStrip) {
+        std::string returnString{stringToStrip};
+        if (returnString.find(whatToStrip) == std::string::npos) {
+            return returnString;
+        }
+        size_t foundPosition{stringToStrip.find(whatToStrip)};
+        if (foundPosition == 0) {
+            returnString = returnString.substr(whatToStrip.length());
+        } else if (foundPosition == (returnString.length() - whatToStrip.length())) {
+            returnString = returnString.substr(0, foundPosition);
+        } else {
+            returnString = returnString.substr(0, foundPosition) + returnString.substr(foundPosition+whatToStrip.length());
+        }
+        return returnString;
+    }
+
+    std::string stripFromString(const std::string &stringToStrip, char whatToStrip) {
+        return stripFromString(stringToStrip, std::string(1, whatToStrip));
+    }
+    std::string stripFromString(const std::string &stringToStrip, const char *whatToStrip) {
+        return stripFromString(stringToStrip, std::string{whatToStrip});
+    }
+    std::string stripAllFromString(const std::string &stringToStrip, const std::string &whatToStrip) {
+        std::string returnString = stringToStrip;
+        if (returnString.find(whatToStrip) == std::string::npos) {
+            return returnString;
+        }
+        while (returnString.find(whatToStrip) != std::string::npos) {
+            returnString = stripFromString(returnString, whatToStrip);
+        }
+        return returnString;
+    }
+
+    std::string stripAllFromString(const std::string &stringToStrip, const char *whatToStrip) {
+        return stripAllFromString(stringToStrip, std::string{whatToStrip});
+    }
+
+    std::string stripAllFromString(const std::string &stringToStrip, char whatToStrip) {
+        return stripAllFromString(stringToStrip, std::string(1, whatToStrip));
+    }
+
+    inline bool isWhitespace(const std::string &str) {
+        return std::all_of(str.begin(), str.end(), [](char c) { return c == ' '; });
+    }
 }
 
-inline bool endsWith(const std::string &stringToCheck, const std::string &matchString) {
-    return (matchString.size() > stringToCheck.size() ? false : std::equal(matchString.rbegin(), matchString.rend(), stringToCheck.rbegin());
-}
-
-inline bool endsWith(const std::string &stringToCheck, char matchChar) {
-    return endsWith(stringToCheck, std::string(1, matchChar));
-}
-
-inline bool startsWith(const std::string &stringToCheck, const std::string &matchString) {
-   return (stringToCheck.find(matchString) == 0);
-}
-
-inline bool startsWith(const std::string &stringToCheck, char matchChar) {
-   return startsWith(stringToCheck, std::string{1, matchChar});
-} 
-
-inline bool startsWith(const std::string &str, const char *compare) {
-    return startsWith(str, static_cast<std::string>(compare));
-}
-
-
-
-template<typename Container>
-bool isEqualsSwitch(const char *switchToCheck, const Container &switches) {
-    return isEqualsSwitch(static_cast<std::string>(switchToCheck), switches);
-}
-
-template <typename Container, typename InputIter>
-Container parseToContainer(InputIter first, InputIter last, typename std::remove_reference<decltype(*first)>::type delimiter)
-{
-	Container returnContainer;
-	InputIter it;
-	do {
-		it = std::find(first, last, delimiter);
-		typename Container::value_type tempContainer;
-		std::copy(first, it, std::inserter(tempContainer, tempContainer.end()));
-		if (!tempContainer.empty()) {
-			returnContainer.insert(returnContainer.end(), tempContainer);
-		}
-		first = it+1;
-	} while (it != last);
-	return returnContainer;
-}
-
+using namespace UDPCommunicationUtilities;
 
 bool isValidIpAddress(const char *str);
 bool isValidWebAddress(const char *str);
