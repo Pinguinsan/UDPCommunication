@@ -22,6 +22,11 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstdlib>
+#include <iostream>
+#include <stdexcept>
+#include <exception>
+#include <limits>
+#include <mutex>
 #include <memory.h>
 
 #include "udpduplex.h"
@@ -283,7 +288,7 @@ void UDPServer::initialize(uint16_t portNumber)
 
     this->m_setSocketResult = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (this->m_setSocketResult == -1) {
-       throw std::runtime_error("ERROR: UDPClient could not set socket " + tQuoted(this->m_setSocketResult) + " (is something else using it?)");
+       throw std::runtime_error("ERROR: UDPServer could not set socket " + tQuoted(this->m_setSocketResult) + " (is something else using it?)");
     }
 
     setsockopt(this->m_setSocketResult, SOL_SOCKET, SO_SNDBUF, &UDPServer::BROADCAST, sizeof(UDPServer::BROADCAST));
@@ -292,9 +297,11 @@ void UDPServer::initialize(uint16_t portNumber)
     this->m_socketAddress.sin_addr.s_addr = INADDR_ANY;
     this->m_socketAddress.sin_port = htons(portNumber);
 
+    /*
     if (bind(this->m_setSocketResult, reinterpret_cast<sockaddr *>(&this->m_socketAddress), sizeof(sockaddr)) == -1) {
-       throw std::runtime_error("ERROR: UDPClient could not bind socket " + tQuoted(this->m_setSocketResult) + " (is something else using it?)");
+       throw std::runtime_error("ERROR: UDPServer could not bind socket " + tQuoted(this->m_setSocketResult) + " (is something else using it?)");
     }
+    */
 }
 
 void UDPServer::startListening(int socketNumber)
@@ -659,8 +666,7 @@ uint16_t UDPServer::doUserSelectPortNumber()
 std::shared_ptr<UDPServer> UDPServer::doUserSelectUDPServer()
 {
     uint16_t portNumber{UDPServer::doUserSelectPortNumber()};
-    std::shared_ptr<UDPServer> udpServer{std::make_shared<UDPServer>(portNumber)};
-    return udpServer;
+    return std::make_shared<UDPServer>(portNumber);
 }
 
 std::string UDPServer::readUntil(int socketNumber, char until)
@@ -921,8 +927,6 @@ unsigned long int UDPClient::timeout() const
 void UDPClient::initialize(const std::string &hostName, uint16_t portNumber, uint16_t returnAddressPortNumber)
 {
     this->m_udpSocketIndex = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-
     if (!this->isValidPortNumber(portNumber)) {
         uint16_t temp{portNumber};
         portNumber = UDPClient::DEFAULT_PORT_NUMBER;
@@ -957,9 +961,11 @@ void UDPClient::initialize(const std::string &hostName, uint16_t portNumber, uin
         inet_pton(AF_INET, inet_ntoa(reinterpret_cast<sockaddr_in *>(temp.get())->sin_addr), &(this->m_destinationAddress.sin_addr));
     }
 
+    
     if (bind(this->m_udpSocketIndex, reinterpret_cast<sockaddr*>(&this->m_returnAddress), sizeof(this->m_returnAddress)) != 0) {
        throw std::runtime_error("ERROR: UDPClient could not bind socket " + tQuoted(this->m_udpSocketIndex) + " (is something else using it?)");
     }
+   
     
 }
 

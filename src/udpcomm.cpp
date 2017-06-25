@@ -31,7 +31,7 @@
 #include <list>
 #include <queue>
 #include <regex>
-
+#include <random>
 #if defined(_WIN32)
 #else
     #include <unistd.h>
@@ -225,6 +225,13 @@ namespace UDPCommunicationUtilities {
     inline bool isWhitespace(const std::string &str) {
         return std::all_of(str.begin(), str.end(), [](char c) { return c == ' '; });
     }
+
+    int randomBetween(int lowLimit, int highLimit) {
+        std::random_device randomSeeder{};
+        std::default_random_engine randomEngine(std::random_device{}());
+        std::uniform_int_distribution<int> randomGenerator(lowLimit, highLimit);
+        return randomGenerator(randomEngine);
+    }
 }
 
 using namespace UDPCommunicationUtilities;
@@ -302,7 +309,7 @@ static std::shared_ptr<UDPServer> udpServer{nullptr};
 static std::string clientHostName{"127.0.0.1"};
 static std::string clientPortNumber{std::to_string(UDPDuplex::DEFAULT_CLIENT_PORT_NUMBER)};
 static std::string serverPortNumber{std::to_string(UDPDuplex::DEFAULT_SERVER_PORT_NUMBER)};
-static std::string clientReturnAddressPortNumber{serverPortNumber};
+static std::string clientReturnAddressPortNumber{std::to_string(randomBetween(0, std::numeric_limits<uint16_t>::max() - 1))};
 
 static bool sendOnly{false};
 static bool receiveOnly{false};

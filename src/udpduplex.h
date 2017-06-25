@@ -21,16 +21,10 @@
 #ifndef TJLUTILS_UDPDUPLEX_H
 #define TJLUTILS_UDPDUPLEX_H
 
-#include <iostream>
 #include <memory>
-#include <stdexcept>
-#include <exception>
 #include <sstream>
-#include <limits>
 #include <deque>
-#include <mutex>
 #include <future>
-
 
 #if defined (_WIN32)
 
