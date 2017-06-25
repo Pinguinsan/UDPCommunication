@@ -299,7 +299,7 @@ static std::shared_ptr<UDPDuplex> udpDuplex{nullptr};
 static std::shared_ptr<UDPClient> udpClient{nullptr};
 static std::shared_ptr<UDPServer> udpServer{nullptr};
 
-static std::string clientHostName{UDPDuplex::DEFAULT_CLIENT_HOST_NAME};
+static std::string clientHostName{"127.0.0.1"};
 static std::string clientPortNumber{std::to_string(UDPDuplex::DEFAULT_CLIENT_PORT_NUMBER)};
 static std::string serverPortNumber{std::to_string(UDPDuplex::DEFAULT_SERVER_PORT_NUMBER)};
 static std::string clientReturnAddressPortNumber{serverPortNumber};
@@ -778,6 +778,9 @@ void doAtExit()
 
 void interruptHandler(int signalNumber)
 {
+#if defined(_WIN32)
+
+#else
     if ((signalNumber == SIGUSR1) || (signalNumber == SIGUSR2) || (signalNumber == SIGCHLD)) {
         return;
     }
@@ -790,10 +793,14 @@ void interruptHandler(int signalNumber)
         //udpDuplex->closePort();
     }
     exit (signalNumber);
+#endif //defined(_WIN32)
 }
 
 void installSignalHandlers(void (*signalHandler)(int))
 {
+#if defined(_WIN32)
+
+#else
     static struct sigaction signalInterruptHandler;
     signalInterruptHandler.sa_handler = signalHandler;
     sigemptyset(&signalInterruptHandler.sa_mask);
@@ -814,6 +821,7 @@ void installSignalHandlers(void (*signalHandler)(int))
     sigaction(SIGTSTP, &signalInterruptHandler, NULL);
     sigaction(SIGTTIN, &signalInterruptHandler, NULL);
     sigaction(SIGTTOU, &signalInterruptHandler, NULL);
+#endif //defined(_WIN32)
 }
 
 void startAsyncStdinTask(const std::function<std::string(void)> &func)
