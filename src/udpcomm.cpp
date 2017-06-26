@@ -96,7 +96,15 @@ namespace UDPCommunicationUtilities {
         return std::string(howMany, ' ');
     }
 
-
+    std::string stripTrailingLineEndings(const std::string &str) {
+        std::string returnString{str};
+        if (returnString.length() > 0) {
+            while ((returnString.back() == '\r') || (returnString.back() == '\n')) {
+                returnString.pop_back();
+            }
+        }
+        return returnString;
+    }
     template<typename Container>
     bool isSwitch(const std::string &switchToCheck, const Container &switches) {
         std::string copyString{switchToCheck};
@@ -435,7 +443,7 @@ int main(int argc, char *argv[])
                     std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
                 }
             }
-        } else if (isSwitch(argv[i], CLIENT_RETURN_ADDRESS_PORT_NUMBER_SWITCHES)) {
+        }/* else if (isSwitch(argv[i], CLIENT_RETURN_ADDRESS_PORT_NUMBER_SWITCHES)) {
             if (argv[i+1]) {
                 std::string maybePortString{static_cast<std::string>(argv[i+1])};
                 int maybePort{0};
@@ -477,7 +485,7 @@ int main(int argc, char *argv[])
                     std::cout << "WARNING: Switch " << tQuoted(argv[i]) << " accepted, but specified client port number " << tQuoted(maybePortString) << " is not a number between 0 and " << MAXIMUM_PORT_NUMBER << ", skipping option" << std::endl;
                 }
             }
-        } else if (isSwitch(argv[i], LINE_ENDING_SWITCHES)) {
+        } */else if (isSwitch(argv[i], LINE_ENDING_SWITCHES)) {
             if (lineEndings != "") {
                 std::cout << "WARNING: Switch " << argv[i] << " accepted, but lineEndings have already been set by another option (" << lineEndings << "), skipping option" << std::endl;
             } else if (argv[i+1]) {
@@ -581,10 +589,10 @@ int main(int argc, char *argv[])
     } else {
         prettyPrinter->println(clientReturnAddressPortNumber);
     }
-
+/*
     std::cout << "Using ClientReturnAddressPortNumber=";
     prettyPrinter->println(clientReturnAddressPortNumber);
-    
+*/    
     std::cout << "Using LineEndings=";
     prettyPrinter->println(getPrettyLineEndings(lineEndings));
 
@@ -881,7 +889,7 @@ void backspaceTerminal(unsigned int howFar)
 std::string doUDPreadLine()
 {
     if (udpDuplex->available()) {
-        return udpDuplex->readLine();
+        return stripTrailingLineEndings(udpDuplex->readLine());
     } else {
         return "";
     }

@@ -44,6 +44,22 @@ inline bool endsWith(const std::string &stringToCheck, char matchChar)
 template <typename T> static inline std::string toStdString(const T &t) { 
     return dynamic_cast<std::stringstream &>(std::stringstream{} << t).str(); 
 }
+
+static std::string toStdString(const struct sockaddr_in &sock) {
+    std::string returnString{""};
+    uint16_t portNumber{ntohs(sock.sin_port)};
+  
+    char buffer[INET_ADDRSTRLEN];
+    memset(buffer, '\0', INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &(sock.sin_addr), buffer, INET_ADDRSTRLEN);
+    returnString += '[';
+    returnString += buffer;
+    returnString += ':';
+    returnString += toStdString(portNumber);
+    returnString += ']';
+    return returnString;
+}
+
 template <typename T> static inline std::string tQuoted(const T &t) {
     return "\"" + toStdString(t) + "\"";
 }
@@ -299,9 +315,10 @@ void UDPServer::initialize(uint16_t portNumber)
 
     /*
     if (bind(this->m_setSocketResult, reinterpret_cast<sockaddr *>(&this->m_socketAddress), sizeof(sockaddr)) == -1) {
-       throw std::runtime_error("ERROR: UDPServer could not bind socket " + tQuoted(this->m_setSocketResult) + " (is something else using it?)");
+       throw std::runtime_error("ERROR: UDPServer could not bind socket to address " + tQuoted(toStdString(this->m_socketAddress)) + " (is something else using it?)");
     }
     */
+    
 }
 
 void UDPServer::startListening(int socketNumber)
@@ -961,9 +978,8 @@ void UDPClient::initialize(const std::string &hostName, uint16_t portNumber, uin
         inet_pton(AF_INET, inet_ntoa(reinterpret_cast<sockaddr_in *>(temp.get())->sin_addr), &(this->m_destinationAddress.sin_addr));
     }
 
-    
     if (bind(this->m_udpSocketIndex, reinterpret_cast<sockaddr*>(&this->m_returnAddress), sizeof(this->m_returnAddress)) != 0) {
-       throw std::runtime_error("ERROR: UDPClient could not bind socket " + tQuoted(this->m_udpSocketIndex) + " (is something else using it?)");
+       throw std::runtime_error("ERROR: UDPClient could not bind socket to address " + tQuoted(toStdString(this->m_returnAddress)) + " (is something else using it?)");
     }
    
     
