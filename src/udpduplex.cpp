@@ -203,7 +203,7 @@ UDPServer::UDPServer() :
 UDPServer::UDPServer(uint16_t portNumber) :
     m_socketAddress{},
     m_isListening{false},
-    m_setSocketResult{0},
+    m_socketNumber{0},
     m_timeout{UDPServer::DEFAULT_TIMEOUT},
     m_datagramQueue{},
     m_shutEmDown{false}
@@ -240,7 +240,7 @@ void UDPServer::setTimeout(long timeout)
     struct timeval tv{};
     tv.tv_sec = 0;
     tv.tv_usec = this->m_timeout * 3;
-    if (setsockopt(this->m_setSocketResult, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+    if (setsockopt(this->m_socketNumber, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         this->m_timeout = tempTimeout;
         throw std::runtime_error("In UDPServer::setTimeout(long): An error occurred while attempting to set the socket timeout");
     }
@@ -302,22 +302,22 @@ void UDPServer::initialize(uint16_t portNumber)
     }
 
 
-    this->m_setSocketResult = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (this->m_setSocketResult == -1) {
-       throw std::runtime_error("ERROR: UDPServer could not set socket " + tQuoted(this->m_setSocketResult) + " (is something else using it?)");
+    this->m_socketNumber = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (this->m_socketNumber == -1) {
+       throw std::runtime_error("ERROR: UDPServer could not set socket " + tQuoted(this->m_socketNumber) + " (is something else using it?)");
     }
 
-    setsockopt(this->m_setSocketResult, SOL_SOCKET, SO_SNDBUF, &UDPServer::BROADCAST, sizeof(UDPServer::BROADCAST));
+    setsockopt(this->m_socketNumber, SOL_SOCKET, SO_SNDBUF, &UDPServer::BROADCAST, sizeof(UDPServer::BROADCAST));
     memset(&this->m_socketAddress, 0, sizeof(this->m_socketAddress));
     this->m_socketAddress.sin_family = AF_INET;
     this->m_socketAddress.sin_addr.s_addr = INADDR_ANY;
     this->m_socketAddress.sin_port = htons(portNumber);
 
-    /*
-    if (bind(this->m_setSocketResult, reinterpret_cast<sockaddr *>(&this->m_socketAddress), sizeof(sockaddr)) == -1) {
+    
+    if (bind(this->m_socketNumber, reinterpret_cast<sockaddr *>(&this->m_socketAddress), sizeof(sockaddr)) == -1) {
        throw std::runtime_error("ERROR: UDPServer could not bind socket to address " + tQuoted(toStdString(this->m_socketAddress)) + " (is something else using it?)");
     }
-    */
+    
     
 }
 
@@ -413,7 +413,7 @@ void UDPServer::asyncDatagramListener()
         std::string receivedString{""};
         sockaddr_in receivedAddress{};
         platform_socklen_t socketSize{sizeof(sockaddr)};
-        ssize_t returnValue {recvfrom(this->m_setSocketResult,
+        ssize_t returnValue {recvfrom(this->m_socketNumber,
                             lowLevelReceiveBuffer,
                             sizeof(lowLevelReceiveBuffer)-1,
                             0,
@@ -496,7 +496,7 @@ void UDPServer::syncDatagramListener()
     std::string receivedString{""};
     sockaddr_in receivedAddress{};
     platform_socklen_t socketSize{sizeof(sockaddr)};
-    ssize_t returnValue{recvfrom(this->m_setSocketResult,
+    ssize_t returnValue{recvfrom(this->m_socketNumber,
                         lowLevelReceiveBuffer,
                         sizeof(lowLevelReceiveBuffer)-1,
                         0,
@@ -716,6 +716,16 @@ std::string UDPServer::peek(int socketNumber)
     }
 }
 
+void UDPServer::setIsEchoServer(bool isEchoServer)
+{
+    this->m_isEchoServer = isEchoServer;
+}
+
+bool UDPServer::isEchoServer() const
+{
+    return this->m_isEchoServer;
+}
+
 UDPDatagram UDPServer::peekDatagram(int socketNumber)
 {
     this->syncDatagramListener(socketNumber);
@@ -803,7 +813,7 @@ std::string UDPServer::readLine(int socketNumber)
 UDPServer::~UDPServer()
 {
     this->stopListening();
-    shutdown(this->m_setSocketResult, SHUT_RDWR);
+    shutdown(this->m_socketNumber, SHUT_RDWR);
 }
 
 //Loopback
@@ -978,9 +988,11 @@ void UDPClient::initialize(const std::string &hostName, uint16_t portNumber, uin
         inet_pton(AF_INET, inet_ntoa(reinterpret_cast<sockaddr_in *>(temp.get())->sin_addr), &(this->m_destinationAddress.sin_addr));
     }
 
+    /*
     if (bind(this->m_udpSocketIndex, reinterpret_cast<sockaddr*>(&this->m_returnAddress), sizeof(this->m_returnAddress)) != 0) {
        throw std::runtime_error("ERROR: UDPClient could not bind socket to address " + tQuoted(toStdString(this->m_returnAddress)) + " (is something else using it?)");
     }
+    */
    
     
 }
@@ -1002,16 +1014,32 @@ int UDPClient::resolveAddressHelper(const std::string &hostName, int family, con
 
 ssize_t UDPClient::writeByte(char toSend) 
 { 
-    return this->writeLine(std::string{1, toSend}); 
+    return this->writeLine(this->hostName(), this->portNumber(), std::string{1, toSend}); 
+}
+
+ssize_t UDPClient::writeByte(const std::string &hostName, uint16_t portNumber, char toSend) 
+{ 
+    return this->writeLine(hostName, portNumber, std::string{1, toSend}); 
 }
 
 ssize_t UDPClient::writeLine(const char *str) 
 { 
-    return this->writeLine(static_cast<std::string>(str)); 
+    return this->writeLine(this->hostName(), this->portNumber(), std::string{str}); 
 }
 
-ssize_t UDPClient::writeLine(const std::string &str)
+ssize_t UDPClient::writeLine(const std::string &hostName, uint16_t portNumber, const char *str) 
+{ 
+    return this->writeLine(hostName, portNumber, std::string{str}); 
+}
+
+ssize_t UDPClient::writeLine(const std::string &hostName, uint16_t portNumber, const std::string &str)
 {
+    if (this->hostName() != hostName) {
+        this->setHostName(hostName);   
+    }
+    if (this->portNumber() != portNumber) {
+        this->setPortNumber(portNumber);
+    }
     std::string copyString{str};
     if (!endsWith(copyString, this->m_lineEnding)) {
         copyString += this->m_lineEnding;
@@ -1029,6 +1057,11 @@ ssize_t UDPClient::writeLine(const std::string &str)
         }
     } while (retryCount++ < UDPClient::SEND_RETRY_COUNT);
     return 0;
+}
+
+ssize_t UDPClient::writeLine(const std::string &str)
+{
+    this->writeLine(this->hostName(), this->portNumber(), str);
 }
 
 bool constexpr UDPClient::isValidPortNumber(int portNumber)
@@ -1363,10 +1396,28 @@ void UDPDuplex::flushTX()
     }
 }  
 
+ssize_t UDPDuplex::writeLine(const std::string &hostName, uint16_t portNumber, const char *str)
+{ 
+    if ((this->m_udpObjectType == UDPObjectType::Client) || (this->m_udpObjectType == UDPObjectType::Duplex)) {
+        return this->m_udpClient->writeLine(hostName, portNumber, str); 
+    } else {
+        return 0;
+    }
+}
+
+ssize_t UDPDuplex::writeLine(const std::string &hostName, uint16_t portNumber, const std::string &str)
+{
+    if ((this->m_udpObjectType == UDPObjectType::Client) || (this->m_udpObjectType == UDPObjectType::Duplex)) {
+        return this->m_udpClient->writeLine(hostName, portNumber, str);
+    } else {
+        return 0;
+    }
+}
+
 ssize_t UDPDuplex::writeLine(const char *str)
 { 
     if ((this->m_udpObjectType == UDPObjectType::Client) || (this->m_udpObjectType == UDPObjectType::Duplex)) {
-        return this->m_udpClient->writeLine(str); 
+        return this->m_udpClient->writeLine(this->m_udpClient->hostName(), this->m_udpClient->portNumber(), str); 
     } else {
         return 0;
     }
@@ -1375,7 +1426,7 @@ ssize_t UDPDuplex::writeLine(const char *str)
 ssize_t UDPDuplex::writeLine(const std::string &str)
 {
     if ((this->m_udpObjectType == UDPObjectType::Client) || (this->m_udpObjectType == UDPObjectType::Duplex)) {
-        return this->m_udpClient->writeLine(str);
+        return this->m_udpClient->writeLine(this->m_udpClient->hostName(), this->m_udpClient->portNumber(), str); 
     } else {
         return 0;
     }

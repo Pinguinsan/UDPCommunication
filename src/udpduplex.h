@@ -118,6 +118,8 @@ public:
     void stopListening();
     bool isListening() const;
     std::string lineEnding() const;
+    bool isEchoServer() const;
+    void setIsEchoServer(bool isEchoServer);
 
     long timeout() const;
     void setPortNumber(uint16_t portNumber);
@@ -149,13 +151,14 @@ public:
 
 private:
     struct sockaddr_in m_socketAddress;
-    int m_setSocketResult;
+    int m_socketNumber;
     bool m_isListening;
     long m_timeout;
     std::deque<UDPDatagram> m_datagramQueue;
     std::mutex m_ioMutex;
     bool m_shutEmDown;
     std::string m_lineEnding;
+    bool m_isEchoServer;
 
     void initialize(uint16_t portNumber);
 #if defined(__ANDROID__)
@@ -206,6 +209,8 @@ public:
 
     ssize_t writeLine(const char *str);
     ssize_t writeLine(const std::string &str);
+    ssize_t writeLine(const std::string &hostName, uint16_t portNumber, const char *str);
+    ssize_t writeLine(const std::string &hostName, uint16_t portNumber, const std::string &str);
     uint16_t portNumber() const;
     std::string hostName() const;
     uint16_t returnAddressPortNumber() const;
@@ -241,6 +246,7 @@ private:
     std::string m_lineEnding;
     
     ssize_t writeByte(char toSend);
+    ssize_t writeByte(const std::string &hostName, uint16_t portNumber, char toSend);
     int resolveAddressHelper(const std::string &hostName, int family, const std::string &service, sockaddr_storage* addressPtr);
     void initialize(const std::string &hostName, uint16_t portNumber, uint16_t returnAddressPortNumber);
 
@@ -261,6 +267,8 @@ public:
     /*Client/Sender*/
     ssize_t writeLine(const std::string &str);
     ssize_t writeLine(const char *str);
+    ssize_t writeLine(const std::string &hostName, uint16_t portNumber, const char *str);
+    ssize_t writeLine(const std::string &hostName, uint16_t portNumber, const std::string &str);
 
     void setClientHostName(const std::string &hostName);
     void setClientTimeout(long timeout);
