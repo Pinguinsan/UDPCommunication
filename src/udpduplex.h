@@ -187,6 +187,8 @@ private:
 
     void startListening(int socketNumber);
 
+    void respondTo(struct sockaddr_in *address, const std::string &str);
+
     static const uint16_t BROADCAST;
     static const constexpr size_t RECEIVED_BUFFER_MAX{65535};
     static const constexpr size_t MAXIMUM_BUFFER_SIZE{65535};

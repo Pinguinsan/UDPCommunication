@@ -407,8 +407,8 @@ bool UDPServer::isListening() const
 void UDPServer::asyncDatagramListener()
 {
     std::unique_lock<std::mutex> ioMutexLock{this->m_ioMutex, std::defer_lock};
+    char lowLevelReceiveBuffer[UDPServer::RECEIVED_BUFFER_MAX];
     do {
-        char lowLevelReceiveBuffer[UDPServer::RECEIVED_BUFFER_MAX];
         memset(lowLevelReceiveBuffer, 0, UDPServer::RECEIVED_BUFFER_MAX);
         std::string receivedString{""};
         sockaddr_in receivedAddress{};
@@ -437,8 +437,8 @@ void UDPServer::asyncDatagramListener()
 void UDPServer::asyncDatagramListener(int socketNumber)
 {
     std::unique_lock<std::mutex> ioMutexLock{this->m_ioMutex, std::defer_lock};
+    char lowLevelReceiveBuffer[UDPServer::RECEIVED_BUFFER_MAX];
     do {
-        char lowLevelReceiveBuffer[UDPServer::RECEIVED_BUFFER_MAX];
         memset(lowLevelReceiveBuffer, 0, UDPServer::RECEIVED_BUFFER_MAX);
         std::string receivedString{""};
         sockaddr_in receivedAddress{};
@@ -457,7 +457,6 @@ void UDPServer::asyncDatagramListener(int socketNumber)
                 ioMutexLock.lock();
                 this->m_datagramQueue.emplace_back(receivedAddress, receivedString);
                 ioMutexLock.unlock();
-
             }
         }
     } while (!this->m_shutEmDown);
@@ -485,7 +484,29 @@ void UDPServer::syncDatagramListener(int socketNumber)
         ioMutexLock.lock();
         this->m_datagramQueue.emplace_back(receivedAddress, receivedString);
         ioMutexLock.unlock();
+        if (this->m_isEchoServer) {
+            this->respondTo(&receivedAddress, receivedString);
+        }
     }
+}
+
+void UDPServer::respondTo(struct sockaddr_in *address, const std::string &receivedString)
+{
+    if (!address) {
+        throw std::runtime_error("In UDPServer::respondTo(struct sockaddr_in *, const std::string &): sockaddr_in is a nullptr");
+    }
+    auto udpSocketIndex = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ssize_t bytesWritten{sendto(udpSocketIndex, 
+                        receivedString.c_str(), 
+                        strlen(receivedString.c_str()),
+                        MSG_DONTWAIT,
+                        reinterpret_cast<sockaddr*>(address),
+                        sizeof(*address)) };
+    /*
+    if ((bytesWritten != -1) && (errno != EAGAIN) && (errno != EWOULDBLOCK))  {
+        return bytesWritten;
+    }
+    */
 }
 
 void UDPServer::syncDatagramListener()
